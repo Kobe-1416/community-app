@@ -4,60 +4,101 @@ import {
   TextInput, 
   Text, 
   Pressable, 
-  KeyboardAvoidingView, 
-  ScrollView, 
-  Platform,
+  ScrollView,
+  Alert
 } from "react-native";
 import Button from "../components/Button";
-import Header from "../components/Header"
+import Header from "../components/Header";
+import React, { useState } from "react";
 
 export default function LoginScreen({ navigation }) {
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!phone || !password) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch("http://10.0.2.2:3000/auth1/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phone,
+          password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        Alert.alert("Login failed", data.message || "Invalid credentials");
+        return;
+      }
+
+      // later: store token / user info
+      navigation.replace("MainTabs");
+
+    } catch (error) {
+      Alert.alert("Network error", "Could not connect to server");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>  
-      {/* <Text style={styles.title}>CommunityApp</Text> */}
-      <Header title="CommunityApp"></Header>
+      <Header title="CommunityApp" />
 
       <View style={styles.containerInput}>
-        <TextInput style={styles.input}
+        <TextInput
+          style={styles.input}
           placeholder="Cellphone"
-          keyboardType="numeric"/>
-          <TextInput style={styles.input} placeholder="Password" secureTextEntry/>
+          keyboardType="numeric"
+          value={phone}
+          onChangeText={setPhone}
+        />
 
-            <Button title="Login" onPress={() => navigation.replace("MainTabs")}/>
-              
-          <Pressable onPress={() => navigation.navigate("Register")}>
-          <Text style={styles.createAcc}>Don't have an account?{"\n"}
-            Register
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
+
+        <Button
+          title={loading ? "Logging in..." : "Login"}
+          onPress={handleLogin}
+          disabled={loading}
+        />
+
+        <Pressable onPress={() => navigation.navigate("Register")}>
+          <Text style={styles.createAcc}>
+            Don't have an account?{"\n"}Register
           </Text>
-          </Pressable>
-          
-        </View>
+        </Pressable>
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  containter: {
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
+  container: {
+    flexGrow: 1,
     padding: 20,
   },
   containerInput: {
     justifyContent: "center",
-    height: "100%",
+    flex: 1,
     alignItems: "center",
-    marginTop: "5%",
-
-  },
-  title: {
-    fontSize: 34,
-    fontWeight: "bold",
-    marginTop: "40%",
-    width: "100%",
-    height: 50,
-    textAlign: "center",
-    backgroundColor: "#85FF27",
   },
   input: {
     width: "86%",
@@ -67,22 +108,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 15,
   },
-  button:{
-    backgroundColor: "#85FF27",
-    padding: 15,
-    borderRadius: 25,
-    width: "60%",
-    alignItems: "center",
-    marginTop: 10,
-  },
-  buttonText: {
-    color: "#000000ff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
   createAcc: {
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 15,
-  }
+  },
 });
-
