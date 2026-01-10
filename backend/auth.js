@@ -1,11 +1,13 @@
 // auth.js
 const express = require("express");
+const dotenv = require("dotenv");
+dotenv.config();
 const router = express.Router();
 const bcrypt = require("bcrypt");
 const pool = require("./db"); // assumes you have a pool from pg in a separate db.js
 const jwt = require("jsonwebtoken");
-const dotenv = require("dotenv");
-dotenv.config();
+const authenticateToken = require("./middleware/auth")
+
 const JWT_SECRET = process.env.JSON_WEB_TOKEN_SECRET;
 const JWT_EXPIRATION = process.env.JSON_EXPIRATION;
 
@@ -53,7 +55,6 @@ router.post("/login", async (req, res) => {
     }
     if(await bcrypt.compare(password, result.rows[0].password_hash)){
       console.log("Login successful");
-      console.log(result);
     }
     else{
       return res.status(400).json({success: false, message: "Invalid credentials"});
@@ -68,6 +69,14 @@ router.post("/login", async (req, res) => {
     console.error(err);
     res.status(500).json({ success: false, message: "Server error" });
   }
+});
+
+router.get("/me", authenticateToken, (req, res) => {
+  res.json({
+    success: true,
+    message: "Token is valid access granted",
+    user: req.user
+  });
 });
 
 module.exports = router;

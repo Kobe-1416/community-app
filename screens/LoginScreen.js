@@ -10,6 +10,7 @@ import {
 import Button from "../components/Button";
 import Header from "../components/Header";
 import React, { useState } from "react";
+import * as SecureStore from 'expo-secure-store';
 
 export default function LoginScreen({ navigation }) {
   const [phone, setPhone] = useState("");
@@ -25,7 +26,8 @@ export default function LoginScreen({ navigation }) {
     setLoading(true);
 
     try {
-      const response = await fetch("http://10.0.2.2:3000/auth1/login", {
+      const response = await fetch("http://10.67.141.147:3000/auth/login", {
+        //10.0.2.2
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -44,6 +46,7 @@ export default function LoginScreen({ navigation }) {
       }
 
       // later: store token / user info
+      await SecureStore.setItemAsync("token", data.token);
       navigation.replace("MainTabs");
 
     } catch (error) {
