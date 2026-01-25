@@ -16,6 +16,7 @@ export default function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [dashboard, setDashboard] = useState({
     gateCode: null,
+    weekEnd: null,
     contributions: { current: 0, total: 1 },
     visitorsTotal: 0,
     visitorsInside: 0,
@@ -44,6 +45,7 @@ export default function HomeScreen({ navigation }) {
 
       // 2) fetch fresh data
       await fetchDashboard();
+      // fetch the date of expiry of the gate code or fix the backend payload to include it
     };
 
     init();
@@ -91,6 +93,7 @@ export default function HomeScreen({ navigation }) {
       // assume `data` comes in right shape; map it into our UI state
       const mapped = {
         gateCode: data.gateCode || null,
+        weekEnd: data.weekEnd || null,
         contributions: {
           current: data.contributions?.current ?? 0,
           total: data.contributions?.total ?? 1,
@@ -121,6 +124,7 @@ export default function HomeScreen({ navigation }) {
   // destructure dashboard for easy use in JSX
   const {
     gateCode,
+    weekEnd,
     contributions,
     visitorsTotal,
     visitorsInside,
@@ -129,6 +133,10 @@ export default function HomeScreen({ navigation }) {
     announcementsCount,
   } = dashboard;
 
+  const formattedWeekEnd = weekEnd
+  ? new Date(weekEnd).toISOString().split("T")[0]
+  : "—";
+
   return (
     <ScrollView
       contentContainerStyle={styles.scrollContainer}
@@ -136,7 +144,7 @@ export default function HomeScreen({ navigation }) {
     >
       <CodeCard
         largeText={gateCode ? gateCode : "—"}
-        smallText={gateCode ? "expires: 7 days" : "no code available"}
+        smallText={gateCode ? `expires: ${formattedWeekEnd}` : "no code available"}
       />
 
       <Text style={styles.subtitle}>

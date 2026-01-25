@@ -41,6 +41,8 @@ router.post("/entry", authenticateToken, async (req, res) => {
         [name, surname, phone, plate]
       );
       visitorId = insertVisitor.rows[0].id;
+      // remove this log in production
+      console.log(`New visitor created with ID: ${visitorId}`);
     } else {
       visitorId = visitorResult.rows[0].id;
     }

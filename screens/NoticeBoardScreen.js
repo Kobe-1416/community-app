@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   StyleSheet, 
@@ -14,50 +14,41 @@ import { Ionicons } from '@expo/vector-icons';
 export default function NoticeBoardScreen() {
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Sample announcement data
-  const announcements = [
-    {
-      id: '1',
-      title: 'Water Supply Maintenance',
-      content: 'Water supply will be interrupted tomorrow from 9 AM to 3 PM for maintenance.',
-      date: '2024-12-15',
-      category: 'Maintenance'
-    },
-    {
-      id: '2',
-      title: 'Annual Meeting Announcement',
-      content: 'Annual community meeting scheduled for December 20th at 6 PM in the clubhouse.',
-      date: '2024-12-12',
-      category: 'Meeting'
-    },
-    {
-      id: '3',
-      title: 'Security System Upgrade',
-      content: 'New security cameras will be installed next week. Please avoid parking near the main gate.',
-      date: '2024-12-10',
-      category: 'Security'
-    },
-    {
-      id: '4',
-      title: 'Parking Rules Reminder',
-      content: 'Please ensure your vehicles are parked in designated areas only. Violators will be fined.',
-      date: '2024-12-08',
-      category: 'Rules'
-    },
-    {
-      id: '5',
-      title: 'Community Clean-up Day',
-      content: 'Join us this Saturday for a community clean-up. Gloves and bags will be provided.',
-      date: '2024-12-05',
-      category: 'Event'
-    }
-  ];
+  const [announcements, setAnnouncements] = useState([]);
+  const BASE_URL = "http://10.0.2.2:3000"; // <-- change to your PC IP (e.g. http://192.168.8.107) when testing on a real device
+  const DASHBOARD_ENDPOINT = `${BASE_URL}/api/announcements`;
+
+
+  const fetchAnnouncements = async () => {
+  try {
+    const res = await fetch(`${BASE_URL}/api/announcements`);
+    const json = await res.json();
+
+    if (!json.success) return;
+
+    setAnnouncements(
+      json.announcements.map(a => ({
+        id: String(a.id),
+        title: a.title,
+        body: a.body,   // FIXED
+        date: a.created_at,
+        category: a.category || "General"
+      }))
+    );
+  } catch (err) {
+    console.warn("Failed to load announcements", err);
+  }
+};
+
+
+  useEffect(() => {
+  fetchAnnouncements();
+  }, []);
 
   // Filter announcements based on search
   const filteredAnnouncements = announcements.filter(item =>
     item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.body.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -68,14 +59,15 @@ export default function NoticeBoardScreen() {
         <View style={[styles.categoryBadge, 
           { backgroundColor: item.category === 'Security' ? '#ffeaa7' : 
                            item.category === 'Maintenance' ? '#a29bfe' :
-                           item.category === 'Meeting' ? '#fd79a8' : '#81ecec' }]}>
+                           item.category === 'Meeting' ? '#fd79a8' :
+                           item.category === 'Urgent' ? '#ff4a4a' : '#a0cfe4' }]}>
           <Text style={styles.categoryText}>{item.category}</Text>
         </View>
         <Text style={styles.date}>{formatDate(item.date)}</Text>
       </View>
       
       <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.content}>{item.content}</Text>
+      <Text style={styles.body}>{item.body}</Text>
     </View>
   );
 
@@ -108,18 +100,12 @@ export default function NoticeBoardScreen() {
         </View>
       )}
 
-      {/* Header */}
-      {/* <View style={styles.header}>
-        <Text style={styles.headerTitle}>Notice Board</Text>
-        <Text style={styles.subtitle}>{filteredAnnouncements.length} announcements</Text>
-      </View> */}
-
       {/* Announcements List */}
       <FlatList
         data={filteredAnnouncements}
         renderItem={({ item }) => <AnnouncementCard item={item} />}
         keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContainer}
+        bodyContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
       />
 
@@ -221,7 +207,7 @@ const styles = StyleSheet.create({
     color: '#000',
     marginBottom: 8,
   },
-  content: {
+  body: {
     fontSize: 16,
     color: '#444',
     lineHeight: 22,

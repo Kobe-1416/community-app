@@ -13,9 +13,9 @@ router.post("/", async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO announcements (title, body, created_at)
+      `INSERT INTO announcements (title, content, created_at)
        VALUES ($1, $2, NOW())
-       RETURNING id, title, content, created_at`,
+       RETURNING title, content, created_at`,
       [title, content]
     );
 
@@ -30,7 +30,7 @@ router.post("/", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, title, body, created_at 
+      `SELECT id, title, body, created_at, category
        FROM announcements
        ORDER BY created_at DESC`
     );

@@ -5,21 +5,25 @@ const authenticateToken = require("./middleware/auth");
 
 router.get("/dashboard", authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.userId; // from JWT payload
+    const userId = req.user.dbUserId; // from JWT payload
+    console.log("dashboard auth payload:", req.user);
+
 
     /* 1️⃣ Gate code (current week) */
     const gateCodeResult = await pool.query(
       `
-      SELECT code
-      FROM gate_codes
-      WHERE week_start <= now()
-        AND week_end >= now()
-      ORDER BY id
-      LIMIT 1
-      `
+      SELECT g.code, g.week_end
+   FROM com_users cu
+   JOIN gate_codes g ON cu.current_code_id = g.id
+   WHERE cu.id = $1
+   LIMIT 1
+      `,
+      [userId]
     );
 
     const gateCode = gateCodeResult.rows[0]?.code || null;
+    const weekEnd = gateCodeResult.rows[0]?.week_end || null;
+    console.log("Gate code fetched:", gateCode, "Week end:", weekEnd);
 
     /* 2️⃣ Contributions */
     const contributionsResult = await pool.query(
@@ -93,6 +97,7 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
 
     res.json({
       gateCode,
+      weekEnd,
       contributions: {
         current: Number(contributionsResult.rows[0].current),
         total: Number(contributionsResult.rows[0].total),
