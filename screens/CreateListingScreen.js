@@ -17,8 +17,9 @@ export default function CreateListingScreen({ navigation, route }) {
   const [description, setDescription] = useState('');
   const [phone, setPhone] = useState('');
   const [images, setImages] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!title || !price || !description || !phone) {
       Alert.alert('Missing Information', 'Please fill in all fields');
       return;
@@ -28,25 +29,57 @@ export default function CreateListingScreen({ navigation, route }) {
       return;
     }
 
-    const newListing = {
-      id: Date.now().toString(),
-      title: title.trim(),
+    const listingPayload = {
+      user_id: 1, // hardcoded for now, replace with actual user ID from auth
+      prod_name: title.trim(),
       price: parseFloat(price) || 0,
-      description: description.trim(),
-      phone: phone.trim(),
-      date: new Date().toISOString(),
-      isNew: true,
-      images: images,
-      thumbnail: images[0] || `https://via.placeholder.com/300x200/85FF27/000000?text=${encodeURIComponent(title)}`,
+      prod_desc: description.trim(),
+      cell_no: phone.trim(),
+      images: images, // optional: just URLs for now
     };
 
-    // If a callback was passed via navigation params, call it
-    if (route?.params?.onCreate && typeof route.params.onCreate === 'function') {
-      route.params.onCreate(newListing);
-    }
+    
 
-    Alert.alert('Success', 'Listing created successfully!');
-    navigation.goBack();
+    try {
+      setLoading(true);
+      const res = await fetch('http://10.0.2.2:3000/api/market/items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(listingPayload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Failed to create listing');
+      }
+
+      // Map API response to the frontend format
+      const newListing = {
+        id: data.item.id.toString(),
+        title: data.item.prod_name,
+        price: data.item.price,
+        description: data.item.prod_desc,
+        phone: data.item.cell_no,
+        date: data.item.created_at,
+        isNew: true,
+        images: data.item.images || [],
+        thumbnail: data.item.images?.[0] || `https://via.placeholder.com/300x200/85FF27/000000?text=${encodeURIComponent(title)}`,
+      };
+
+      // Call callback from previous screen if provided
+      if (route?.params?.onCreate && typeof route.params.onCreate === 'function') {
+        route.params.onCreate(newListing);
+      }
+
+      Alert.alert('Success', 'Listing created successfully!');
+      navigation.goBack();
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Error', err.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const addImage = () => {
@@ -54,7 +87,6 @@ export default function CreateListingScreen({ navigation, route }) {
       Alert.alert('Maximum Reached', 'You can only upload up to 8 images');
       return;
     }
-    // Simulate image picker
     setImages([...images, `https://via.placeholder.com/300x200/85FF27/000000?text=Image+${images.length + 1}`]);
   };
 
@@ -63,7 +95,7 @@ export default function CreateListingScreen({ navigation, route }) {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 150 }}>
       <Text style={styles.header}>Create New Listing</Text>
 
       <View style={styles.section}>
@@ -77,7 +109,7 @@ export default function CreateListingScreen({ navigation, route }) {
               </Pressable>
             </View>
           ))}
-          
+
           {images.length < 8 && (
             <Pressable style={styles.addImageButton} onPress={addImage}>
               <Ionicons name="add" size={30} color="#85FF27" />
@@ -93,7 +125,7 @@ export default function CreateListingScreen({ navigation, route }) {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Listing Details</Text>
-        
+
         <TextInput
           style={styles.input}
           placeholder="Title (e.g., iPhone 13 Pro)"
@@ -101,7 +133,7 @@ export default function CreateListingScreen({ navigation, route }) {
           onChangeText={setTitle}
           placeholderTextColor="#888"
         />
-        
+
         <View style={styles.priceContainer}>
           <Text style={styles.currency}>R</Text>
           <TextInput
@@ -113,7 +145,7 @@ export default function CreateListingScreen({ navigation, route }) {
             placeholderTextColor="#888"
           />
         </View>
-        
+
         <TextInput
           style={[styles.input, styles.textArea]}
           placeholder="Description (Be detailed about condition, features, etc.)"
@@ -123,7 +155,7 @@ export default function CreateListingScreen({ navigation, route }) {
           numberOfLines={4}
           placeholderTextColor="#888"
         />
-        
+
         <TextInput
           style={styles.input}
           placeholder="Your phone number"
@@ -134,8 +166,8 @@ export default function CreateListingScreen({ navigation, route }) {
         />
       </View>
 
-      <Pressable style={styles.submitButton} onPress={handleSubmit}>
-        <Text style={styles.submitText}>Publish Listing</Text>
+      <Pressable style={styles.submitButton} onPress={handleSubmit} disabled={loading}>
+        <Text style={styles.submitText}>{loading ? 'Publishing...' : 'Publish Listing'}</Text>
       </Pressable>
     </ScrollView>
   );
@@ -178,6 +210,6 @@ const styles = StyleSheet.create({
   currency: { fontSize: 18, fontWeight: 'bold', color: '#85FF27', marginRight: 10, width: 30 },
   priceInput: { flex: 1 },
   textArea: { height: 120, textAlignVertical: 'top' },
-  submitButton: { backgroundColor: '#85FF27', borderRadius: 10, padding: 18, alignItems: 'center', marginBottom: 30 },
+  submitButton: { backgroundColor: '#85FF27', borderRadius: 10, padding: 18, alignItems: 'center', marginBottom: 0 },
   submitText: { fontSize: 18, fontWeight: 'bold', color: '#000' },
 });

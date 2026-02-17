@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   StyleSheet, 
@@ -11,53 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 export default function MarketPlaceScreen({ navigation }) {
-  const [listings, setListings] = useState([
-    // ... your initial items (same as before)
-    {
-      id: '1',
-      title: 'iPhone 13 Pro',
-      price: 12500,
-      description: '256GB, Blue, Excellent condition with box and accessories',
-      phone: '071 234 5678',
-      date: '2024-12-15',
-      isNew: true,
-      images: ['https://via.placeholder.com/300x200/85FF27/000000?text=iPhone'],
-      thumbnail: 'https://via.placeholder.com/300x200/85FF27/000000?text=iPhone'
-    },
-    {
-      id: '2',
-      title: 'Sofa Set',
-      price: 4500,
-      description: '3-seater sofa in grey fabric, good condition',
-      phone: '082 345 6789',
-      date: '2024-12-14',
-      isNew: false,
-      images: ['https://via.placeholder.com/300x200/CCCCCC/000000?text=Sofa'],
-      thumbnail: 'https://via.placeholder.com/300x200/CCCCCC/000000?text=Sofa'
-    },
-    {
-      id: '3',
-      title: 'Gaming Laptop',
-      price: 18900,
-      description: 'RTX 4070, i7 13th gen, 16GB RAM, 1TB SSD',
-      phone: '083 456 7890',
-      date: '2024-12-13',
-      isNew: true,
-      images: ['https://via.placeholder.com/300x200/85FF27/000000?text=Laptop'],
-      thumbnail: 'https://via.placeholder.com/300x200/85FF27/000000?text=Laptop'
-    },
-    {
-      id: '4',
-      title: 'Bicycle',
-      price: 2500,
-      description: 'Mountain bike, 21 gears, recently serviced',
-      phone: '084 567 8901',
-      date: '2024-12-12',
-      isNew: false,
-      images: ['https://via.placeholder.com/300x200/CCCCCC/000000?text=Bike'],
-      thumbnail: 'https://via.placeholder.com/300x200/CCCCCC/000000?text=Bike'
-    },
-  ]);
+  const [listings, setListings] = useState([]);
 
   // Format date as "2 days ago", "Yesterday", etc.
   const formatDate = (dateString) => {
@@ -71,10 +25,46 @@ export default function MarketPlaceScreen({ navigation }) {
     return `${diffDays} days ago`;
   };
 
+  // Fetch listings from backend
+  const fetchListings = async () => {
+    try {
+      const res = await fetch('http://10.0.2.2:3000/api/market/items'); // replace with your server IP and port
+      const data = await res.json();
+
+      const mapped = data.items.map(item => {
+        const createdDate = new Date(item.created_at);
+        const now = new Date();
+        const diffDays = Math.floor((now - createdDate) / (1000 * 60 * 60 * 24));
+
+        return {
+          id: item.id.toString(),
+          title: item.prod_name,
+          description: item.prod_desc,
+          price: item.price,
+          phone: item.cell_no,
+          date: item.created_at,
+          isNew: diffDays <= 2, // mark as new if within last 2 days
+          thumbnail: 'https://via.placeholder.com/300x200/CCCCCC/000000?text=Item'
+        };
+      });
+
+      // console.log('mapped listings:', mapped);
+
+      setListings(mapped);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Fetch on mount
+  useEffect(() => {
+    fetchListings();
+  }, []);
+
   const ListingCard = ({ item }) => (
     <Pressable 
       style={styles.card}
-      onPress={() => {/* Navigate to detailed view if you add one later */}}
+      onPress={() => {/* Navigate to detailed view if needed */}}
     >
       {item.isNew && (
         <View style={styles.badge}>
@@ -129,7 +119,6 @@ export default function MarketPlaceScreen({ navigation }) {
       <Pressable 
         style={styles.addButton}
         onPress={() =>
-          // Pass a callback which CreateListing will call with the new listing
           navigation.navigate('CreateListing', {
             onCreate: (newListing) => {
               setListings(prev => [newListing, ...prev]);
