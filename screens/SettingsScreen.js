@@ -25,22 +25,49 @@ export default function SettingsScreen({ navigation }) {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isChangingPhone, setIsChangingPhone] = useState(false);
 
-  const handleChangePassword = () => {
-    if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'New passwords do not match');
+  const handleChangePassword = async () => {
+  if (newPassword !== confirmPassword) {
+    Alert.alert('Error', 'New passwords do not match');
+    return;
+  }
+
+  if (newPassword.length < 6) {
+    Alert.alert('Error', 'Password must be at least 6 characters');
+    return;
+  }
+
+  try {
+    const res = await fetch('http://10.0.2.2:3000/api/auth/change-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        currentPassword,
+        newPassword
+      })
+    });
+
+    const data = await res.json(); // optional but recommended
+
+    if (!res.ok) {
+      Alert.alert('Error', data?.message || 'Password change failed');
       return;
     }
-    if (newPassword.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
-      return;
-    }
-    // Here you would call API to change password
+
     Alert.alert('Success', 'Password changed successfully');
+
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
     setIsChangingPassword(false);
-  };
+
+  } catch (error) {
+    Alert.alert('Error', 'Network error. Try again.');
+  }
+};
+
 
   const handleChangePhone = () => {
     if (newPhone.length < 10) {
