@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   StyleSheet, 
@@ -11,11 +11,24 @@ import {
   TouchableOpacity
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
+import * as SecureStore from "expo-secure-store";
 
 export default function SettingsScreen({ navigation }) {
   // State for settings
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isNotifications, setIsNotifications] = useState(true);
+
+  const [token, setToken] = useState(null);
+
+  useEffect(() => {
+    const loadToken = async () => {
+      const storedToken = await SecureStore.getItemAsync('token'); // use your exact key
+      setToken(storedToken);
+      console.log("Loaded token:", storedToken);
+    };
+
+    loadToken();
+  }, []);
   
   // Form states
   const [currentPassword, setCurrentPassword] = useState('');
@@ -26,6 +39,11 @@ export default function SettingsScreen({ navigation }) {
   const [isChangingPhone, setIsChangingPhone] = useState(false);
 
   const handleChangePassword = async () => {
+
+// password: makhe1, number: 0771112221
+
+  console.log("clicked change password", { hasToken: !!token });
+
   if (newPassword !== confirmPassword) {
     Alert.alert('Error', 'New passwords do not match');
     return;
@@ -51,8 +69,10 @@ export default function SettingsScreen({ navigation }) {
 
     const data = await res.json(); // optional but recommended
 
+    console.log('Password change response:', data); // log full response for debugging
     if (!res.ok) {
       Alert.alert('Error', data?.message || 'Password change failed');
+      console.log('Password change error:', data);
       return;
     }
 
@@ -69,16 +89,47 @@ export default function SettingsScreen({ navigation }) {
 };
 
 
-  const handleChangePhone = () => {
-    if (newPhone.length < 10) {
-      Alert.alert('Error', 'Please enter a valid phone number');
+  const handleChangePhone = async () => {
+  if (!/^0[0-9]{9}$/.test(newPhone)) {
+    Alert.alert('Error', 'Enter a valid SA phone number');
+    return;
+  }
+
+  if (!token) {
+    Alert.alert("Error", "Not authenticated");
+    return;
+  }
+
+  try {
+    const res = await fetch('http://10.0.2.2:3000/api/auth/change-phone', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ newPhone }),
+    });
+
+    const data = await res.json();
+    // const text = await res.text();
+    // console.log("RAW RESPONSE:", text);
+
+
+    if (!res.ok) {
+      Alert.alert('Error', data?.message || 'Failed to update phone');
       return;
     }
-    // Here you would call API to change phone number
-    Alert.alert('Success', 'Phone number updated');
+
+    Alert.alert('Success', 'Phone updated successfully');
     setNewPhone('');
     setIsChangingPhone(false);
-  };
+
+  } catch (error) {
+    console.log("CHANGE PHONE ERROR:", error);
+    Alert.alert('Error', error?.message || 'Request failed');
+  }
+};
+
 
   const handleLogout = () => {
     Alert.alert(

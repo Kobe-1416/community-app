@@ -115,6 +115,33 @@ router.post("/change-password", authenticateToken, async (req, res) => {
   }
 });
 
+router.post("/change-phone", authenticateToken, async (req, res) => {
+  try {
+    const { newPhone } = req.body;
+    const userId = req.user.dbUserId;
+
+    if (!newPhone) {
+      return res.status(400).json({ success: false, message: "New phone number is required" });
+    }
+
+    if (!/^0[0-9]{9}$/.test(newPhone)) {
+      return res.status(400).json({ success: false, message: "Invalid phone format" });
+    }
+
+    await pool.query(
+      `UPDATE com_users SET phone = $1 WHERE id = $2`,
+      [newPhone, userId]
+    );
+
+    res.json({ success: true, message: "Phone updated successfully" });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+
 router.get("/me", authenticateToken, (req, res) => {
   res.json({
     success: true,
