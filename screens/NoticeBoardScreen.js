@@ -1,123 +1,153 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  StyleSheet, 
-  TextInput, 
-  Text, 
-  Pressable, 
-  ScrollView, 
-  Platform,
-  FlatList
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  StyleSheet,
+  TextInput,
+  Text,
+  Pressable,
+  FlatList,
 } from "react-native";
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "../context/ThemeContext";
 
 export default function NoticeBoardScreen() {
-  const [searchVisible, setSearchVisible] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [announcements, setAnnouncements] = useState([]);
-  const BASE_URL = "http://10.0.2.2:3000"; // <-- change to your PC IP (e.g. http://192.168.8.107) when testing on a real device
-  const DASHBOARD_ENDPOINT = `${BASE_URL}/api/announcements`;
+  const { isDarkMode } = useTheme();
 
+  const [searchVisible, setSearchVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [announcements, setAnnouncements] = useState([]);
+
+  const BASE_URL = "http://10.0.2.2:3000";
 
   const fetchAnnouncements = async () => {
-  try {
-    const res = await fetch(`${BASE_URL}/api/announcements`);
-    const json = await res.json();
+    try {
+      const res = await fetch(`${BASE_URL}/api/announcements`);
+      const json = await res.json();
 
-    if (!json.success) return;
+      if (!json.success) return;
 
-    setAnnouncements(
-      json.announcements.map(a => ({
-        id: String(a.id),
-        title: a.title,
-        body: a.body,   // FIXED
-        date: a.created_at,
-        category: a.category || "General"
-      }))
-    );
-  } catch (err) {
-    console.warn("Failed to load announcements", err);
-  }
-};
-
+      setAnnouncements(
+        json.announcements.map((a) => ({
+          id: String(a.id),
+          title: a.title,
+          body: a.body,
+          date: a.created_at,
+          category: a.category || "General",
+        }))
+      );
+    } catch (err) {
+      console.warn("Failed to load announcements", err);
+    }
+  };
 
   useEffect(() => {
-  fetchAnnouncements();
+    fetchAnnouncements();
   }, []);
 
-  // Filter announcements based on search
-  const filteredAnnouncements = announcements.filter(item =>
-    item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.body.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // Announcement Card Component
-  const AnnouncementCard = ({ item }) => (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View style={[styles.categoryBadge, 
-          { backgroundColor: item.category === 'Security' ? '#ffeaa7' : 
-                           item.category === 'Maintenance' ? '#a29bfe' :
-                           item.category === 'Meeting' ? '#fd79a8' :
-                           item.category === 'Urgent' ? '#ff4a4a' : '#a0cfe4' }]}>
-          <Text style={styles.categoryText}>{item.category}</Text>
-        </View>
-        <Text style={styles.date}>{formatDate(item.date)}</Text>
-      </View>
-      
-      <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.body}>{item.body}</Text>
-    </View>
-  );
-
-  // Helper function to format date
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      year: 'numeric'
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
+  const filteredAnnouncements = announcements.filter((item) =>
+    (item.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (item.body || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (item.category || "").toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const getCategoryBg = (category) => {
+    return category === "Security"
+      ? "#ffeaa7"
+      : category === "Maintenance"
+      ? "#a29bfe"
+      : category === "Meeting"
+      ? "#fd79a8"
+      : category === "Urgent"
+      ? "#ff4a4a"
+      : "#a0cfe4";
+  };
+
+  const AnnouncementCard = ({ item }) => (
+    <View style={[styles.card, isDarkMode && styles.cardDark]}>
+      <View style={styles.cardHeader}>
+        <View
+          style={[
+            styles.categoryBadge,
+            { backgroundColor: getCategoryBg(item.category) },
+          ]}
+        >
+          <Text style={styles.categoryText}>{item.category}</Text>
+        </View>
+
+        <Text style={[styles.date, isDarkMode && styles.mutedTextDark]}>
+          {formatDate(item.date)}
+        </Text>
+      </View>
+
+      <Text style={[styles.title, isDarkMode && styles.textDark]}>
+        {item.title}
+      </Text>
+
+      <Text style={[styles.body, isDarkMode && styles.mutedTextDark]}>
+        {item.body}
+      </Text>
+    </View>
+  );
+
   return (
-    <View style={styles.container}>
-      {/* Search Bar (conditionally rendered) */}
+    <View style={[styles.container, isDarkMode && styles.containerDark]}>
       {searchVisible && (
-        <View style={styles.searchContainer}>
+        <View
+          style={[
+            styles.searchContainer,
+            isDarkMode && styles.searchContainerDark,
+          ]}
+        >
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, isDarkMode && styles.searchInputDark]}
             placeholder="Search announcements..."
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholderTextColor="#666"
+            placeholderTextColor={isDarkMode ? "#888" : "#666"}
             autoFocus={true}
           />
-          <Pressable onPress={() => setSearchVisible(false)} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color="#666" />
+
+          <Pressable
+            onPress={() => setSearchVisible(false)}
+            style={styles.closeButton}
+          >
+            <Ionicons
+              name="close"
+              size={24}
+              color={isDarkMode ? "#bbb" : "#666"}
+            />
           </Pressable>
         </View>
       )}
 
-      {/* Announcements List */}
       <FlatList
         data={filteredAnnouncements}
         renderItem={({ item }) => <AnnouncementCard item={item} />}
-        keyExtractor={item => item.id}
-        bodyContainerStyle={styles.listContainer}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={[
+          styles.listContainer,
+          isDarkMode && styles.listContainerDark,
+        ]}
         showsVerticalScrollIndicator={false}
       />
 
-      {/* Floating Search Button */}
-      <Pressable 
-        style={styles.floatingButton}
+      <Pressable
+        style={[styles.floatingButton, isDarkMode && styles.floatingButtonDark]}
         onPress={() => setSearchVisible(!searchVisible)}
       >
-        <Ionicons 
-          name={searchVisible ? "close" : "search"} 
-          size={24} 
-          color="#000" 
+        <Ionicons
+          name={searchVisible ? "close" : "search"}
+          size={24}
+          color="#000"
         />
       </Pressable>
     </View>
@@ -127,66 +157,82 @@ export default function NoticeBoardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
+  containerDark: {
+    backgroundColor: "#121212",
+  },
+
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
     paddingHorizontal: 15,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: "#e0e0e0",
   },
+  searchContainerDark: {
+    backgroundColor: "#1e1e1e",
+    borderBottomColor: "#333",
+  },
+
   searchInput: {
     flex: 1,
     height: 40,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: "#f0f0f0",
     borderRadius: 20,
     paddingHorizontal: 15,
     fontSize: 16,
+    color: "#111",
   },
+  searchInputDark: {
+    backgroundColor: "#2a2a2a",
+    color: "#fff",
+  },
+
   closeButton: {
     marginLeft: 10,
     padding: 5,
   },
-  header: {
-    backgroundColor: '#85FF27',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#333',
-    marginTop: 5,
-  },
+
   listContainer: {
     paddingHorizontal: 15,
     paddingVertical: 15,
-    paddingBottom: 80, // Space for floating button
+    paddingBottom: 80,
+    backgroundColor: "#f5f5f5",
   },
+  listContainerDark: {
+    backgroundColor: "#121212",
+  },
+
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 20,
     marginBottom: 15,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    borderWidth: 1,
+    borderColor: "#eee",
   },
+  cardDark: {
+    backgroundColor: "#1e1e1e",
+    borderColor: "#333",
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+
   cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 10,
   },
+
   categoryBadge: {
     paddingHorizontal: 12,
     paddingVertical: 5,
@@ -194,38 +240,54 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#000',
+    fontWeight: "600",
+    color: "#000",
   },
+
   date: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
+
   title: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
+    fontWeight: "bold",
+    color: "#000",
     marginBottom: 8,
   },
+
   body: {
     fontSize: 16,
-    color: '#444',
+    color: "#444",
     lineHeight: 22,
   },
+
+  textDark: {
+    color: "#fff",
+  },
+  mutedTextDark: {
+    color: "#bbb",
+  },
+
   floatingButton: {
-    position: 'absolute',
+    position: "absolute",
     right: 20,
     bottom: 30,
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#85FF27',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
+    backgroundColor: "#85FF27",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
     elevation: 8,
+    borderWidth: 1,
+    borderColor: "#c7c7c7",
+  },
+  floatingButtonDark: {
+    borderColor: "#333",
   },
 });

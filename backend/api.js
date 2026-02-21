@@ -8,12 +8,14 @@ const gateCodesRouter = require("./gateCodes");
 const announcementsRouter = require("./announcements");
 const dashboardRouter = require("./dashboard");
 const marketplaceRouter = require("./marketplace"); 
+const notificationsRouter = require("./notifications");
 
 router.use("/auth", authRouter);
 router.use("/visitors", visitorsRouter);
 router.use("/gate-codes", gateCodesRouter);
 router.use("/announcements", announcementsRouter);
 router.use("/market", marketplaceRouter);
+router.use("/notifications", notificationsRouter);
 router.use("/", dashboardRouter);
 
 module.exports = router;

@@ -35,3 +35,49 @@ Announcements
       date: '2024-12-05',
       category: 'Event'
     }
+
+
+    I am concerned about the vulnerabilities and etc
+npx expo install expo-notifications expo-device
+› Installing 2 SDK 54.0.0 compatible native modules using npm
+> npm install
+
+added 30 packages, removed 1 package, and audited 915 packages in 31s
+
+121 packages are looking for funding
+  run `npm fund` for details
+
+
+added 30 packages, removed 1 package, and audited 915 packages in 31s
+
+121 packages are looking for funding
+  run `npm fund` for details
+
+added 30 packages, removed 1 package, and audited 915 packages in 31s
+
+121 packages are looking for funding
+  run `npm fund` for details
+
+
+121 packages are looking for funding
+  run `npm fund` for details
+
+  run `npm fund` for details
+
+29 vulnerabilities (1 low, 27 high, 1 critical)
+
+29 vulnerabilities (1 low, 27 high, 1 critical)
+
+To address issues that do not require attention, run:
+To address issues that do not require attention, run:
+  npm audit fix
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+  npm audit fix --force
+
+
+Run `npm audit` for details.
+
+should I be or it's all good?

@@ -12,11 +12,19 @@ import {
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from "expo-secure-store";
+import { useTheme } from "../context/ThemeContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { registerForPushAsync, registerDeviceTokenWithServer, syncPushSettingsToServer } from "../notifications/push";
+
 
 export default function SettingsScreen({ navigation }) {
   // State for settings
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [isNotifications, setIsNotifications] = useState(true);
+  const { isDarkMode, setIsDarkMode } = useTheme();
+ const PUSH_KEY = "pref_pushEnabled_v1";
+  const SAFETY_KEY = "pref_safetyEnabled_v1";
+
+  const [pushEnabled, setPushEnabled] = useState(true);
+  const [safetyEnabled, setSafetyEnabled] = useState(false);
 
   const [token, setToken] = useState(null);
 
@@ -29,6 +37,59 @@ export default function SettingsScreen({ navigation }) {
 
     loadToken();
   }, []);
+
+    useEffect(() => {
+    (async () => {
+      const p = await AsyncStorage.getItem(PUSH_KEY);
+      const s = await AsyncStorage.getItem(SAFETY_KEY);
+      if (p !== null) setPushEnabled(p === "true");
+      if (s !== null) setSafetyEnabled(s === "true");
+    })();
+  }, []);
+
+    const onTogglePush = async (value) => {
+    try {
+      setPushEnabled(value);
+      await AsyncStorage.setItem(PUSH_KEY, String(value));
+
+      if (value) {
+        // enabling: ensure token exists + registered
+        const expoToken = await registerForPushAsync();
+        await registerDeviceTokenWithServer(expoToken);
+      }
+
+      await syncPushSettingsToServer({ pushEnabled: value, safetyEnabled });
+    } catch (e) {
+      // revert UI if it fails
+      setPushEnabled((prev) => !prev);
+      await AsyncStorage.setItem(PUSH_KEY, String(!value));
+      Alert.alert("Notifications", e.message);
+    }
+  };
+
+  const onToggleSafety = async (value) => {
+    try {
+      setSafetyEnabled(value);
+      await AsyncStorage.setItem(SAFETY_KEY, String(value));
+
+      // Safety requires push to be enabled (hard dependency)
+      if (value && !pushEnabled) {
+        // Auto-enable push first (or block and ask user)
+        const expoToken = await registerForPushAsync();
+        await registerDeviceTokenWithServer(expoToken);
+        setPushEnabled(true);
+        await AsyncStorage.setItem(PUSH_KEY, "true");
+        await syncPushSettingsToServer({ pushEnabled: true, safetyEnabled: true });
+        return;
+      }
+
+      await syncPushSettingsToServer({ pushEnabled, safetyEnabled: value });
+    } catch (e) {
+      setSafetyEnabled((prev) => !prev);
+      await AsyncStorage.setItem(SAFETY_KEY, String(!value));
+      Alert.alert("Safety alerts", e.message);
+    }
+  };
   
   // Form states
   const [currentPassword, setCurrentPassword] = useState('');
@@ -272,10 +333,23 @@ export default function SettingsScreen({ navigation }) {
           title="Push Notifications"
           rightComponent={
             <Switch
-              value={isNotifications}
-              onValueChange={setIsNotifications}
-              trackColor={{ false: '#767577', true: '#85FF27' }}
-              thumbColor={isNotifications ? '#000' : '#f4f3f4'}
+              value={pushEnabled}
+              onValueChange={onTogglePush}
+              trackColor={{ false: "#767577", true: "#85FF27" }}
+              thumbColor={pushEnabled ? "#000" : "#f4f3f4"}
+            />
+          }
+        />
+
+        <SettingItem
+          icon="shield-outline"
+          title="Safety Alerts (Visitor entry/exit)"
+          rightComponent={
+            <Switch
+              value={safetyEnabled}
+              onValueChange={onToggleSafety}
+              trackColor={{ false: "#767577", true: "#85FF27" }}
+              thumbColor={safetyEnabled ? "#000" : "#f4f3f4"}
             />
           }
         />

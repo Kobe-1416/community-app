@@ -1,41 +1,51 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React from "react";
+import { View, Text, StyleSheet } from "react-native";
+import { useTheme } from "../context/ThemeContext";
 
-// Card component
+const Card = ({ Text1, Text2 }) => {
+  const { isDarkMode } = useTheme();
 
-const Card = ({ Text1, Text2 }) => (
-  <View style={styles.card}>
-    <Text style={styles.Text1}>{Text1}</Text>
-    <Text style={styles.Text2}>{Text2}</Text>
-  </View>
-);
+  return (
+    <View style={[styles.card, isDarkMode && styles.cardDark]}>
+      <Text style={[styles.textBase, styles.text1, isDarkMode && styles.textDark]}>
+        {Text1}
+      </Text>
+      <Text style={[styles.textBase, styles.text2, isDarkMode && styles.textDark]}>
+        {Text2}
+      </Text>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
-    card:{
-        backgroundColor: '#d6d6d6',
-        padding: 15,
-        borderRadius: 25,
-        width: '85%',
-        height: 70,
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        alignItems: 'center',
-        marginTop: 5,
-        borderWidth: 1,           // Add this
-        borderColor: '#c7c7c7'
-    },
-    Text1:{
-        fontSize: 25,
-        fontWeight: 'bold',
-        textAlign: 'center',
-        width: 'fit-content',
-    },
-    Text2:{
-        fontSize: 25,
-        fontWeight: 'bold',
-        textAlign: 'center',
-        width: 'fit-content',
-    }
+  card: {
+    backgroundColor: "#d6d6d6",
+    padding: 15,
+    borderRadius: 25,
+    width: "85%",
+    height: 70,
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    marginTop: 5,
+    borderWidth: 1,
+    borderColor: "#c7c7c7",
+  },
+  cardDark: {
+    backgroundColor: "#1e1e1e",
+    borderColor: "#333",
+  },
+  textBase: {
+    fontSize: 25,
+    fontWeight: "bold",
+    textAlign: "center",
+    color: "#111",
+  },
+  text1: {},
+  text2: {},
+  textDark: {
+    color: "#fff",
+  },
 });
 
 export default Card;

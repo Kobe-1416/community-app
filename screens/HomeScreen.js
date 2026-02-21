@@ -6,6 +6,7 @@ import Card from "../components/Card";
 import PressableCard from "../components/PressableCard";
 import { ScrollView, View, Text, StyleSheet, Pressable, Alert } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import { useTheme } from "../context/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const BASE_URL = "http://10.0.2.2:3000"; // <-- change to your PC IP (e.g. http://192.168.8.107) when testing on a real device
@@ -13,6 +14,7 @@ const DASHBOARD_ENDPOINT = `${BASE_URL}/api/dashboard`;
 const DASHBOARD_CACHE_KEY = "dashboardCache_v1";
 
 export default function HomeScreen({ navigation }) {
+  const { isDarkMode } = useTheme();
   const [loading, setLoading] = useState(false);
   const [dashboard, setDashboard] = useState({
     gateCode: null,
@@ -139,7 +141,10 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <ScrollView
-      contentContainerStyle={styles.scrollContainer}
+      contentContainerStyle={[
+        styles.scrollContainer,
+        isDarkMode && styles.darkScrollContainer,
+      ]}
       showsVerticalScrollIndicator={false}
     >
       <CodeCard

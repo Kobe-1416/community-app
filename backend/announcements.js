@@ -2,27 +2,52 @@
 const express = require("express");
 const router = express.Router();
 const pool = require("./db");
+const { sendExpoPush } = require("./services/pushService");
 
-// Create a new announcement
+// Create a new announcement (+ send push)
 router.post("/", async (req, res) => {
   try {
-    const { title, content } = req.body;
+    const { title, body, category } = req.body;
 
-    if (!title || !content) {
-      return res.status(400).json({ success: false, message: "Title and content required" });
+    if (!title || !body) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Title and body required" });
     }
 
+    // 1) Insert announcement
     const result = await pool.query(
-      `INSERT INTO announcements (title, content, created_at)
-       VALUES ($1, $2, NOW())
-       RETURNING title, content, created_at`,
-      [title, content]
+      `INSERT INTO announcements (title, body, category, created_at)
+       VALUES ($1, $2, $3, NOW())
+       RETURNING id, title, body, category, created_at`,
+      [title, body, category || "General"]
     );
 
-    res.status(201).json({ success: true, announcement: result.rows[0] });
+    const announcement = result.rows[0];
+
+    // 2) Get tokens for users who enabled push
+    const tokensResult = await pool.query(
+      `SELECT expo_push_token
+       FROM user_notification_settings
+       WHERE push_enabled = true
+         AND expo_push_token IS NOT NULL`
+    );
+
+    const tokens = tokensResult.rows.map((r) => r.expo_push_token);
+
+    // 3) Send push (don’t fail the request if push fails)
+    if (tokens.length > 0) {
+      sendExpoPush(tokens, {
+        title: "New announcement",
+        body: announcement.title,
+        data: { type: "announcement", id: announcement.id },
+      }).catch((e) => console.error("Push send failed:", e));
+    }
+
+    return res.status(201).json({ success: true, announcement });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, message: "Server error" });
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
@@ -42,7 +67,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Optional: delete announcements older than 2 weeks (can also be a cron job)
+// Cleanup old announcements
 router.delete("/cleanup", async (req, res) => {
   try {
     const result = await pool.query(
