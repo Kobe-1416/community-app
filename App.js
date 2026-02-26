@@ -7,6 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native";
 
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 
 import RegisterScreen from "./screens/RegisterScreen";
 import LoginScreen from "./screens/LoginScreen";
@@ -15,12 +16,20 @@ import NoticeBoardScreen from "./screens/NoticeBoardScreen";
 import MarketPlaceScreen from "./screens/MarketPlaceScreen";
 import SettingsScreen from "./screens/SettingsScreen";
 import CreateListingScreen from "./screens/CreateListingScreen";
+import AdminScreen from "./screens/Admin/AdminScreen";
+import AdminVisitorsScreen from "./screens/Admin/AdminVisitorsScreen";
+import AdminAddVisitorScreen from "./screens/Admin/AdminAddVisitorScreen";
+import AdminAnnouncementsScreen from "./screens/Admin/AdminAnnouncementsScreen";
+import AdminCreateAnnouncementScreen from "./screens/Admin/AdminCreateAnnouncementScreen";
+import AdminMarketplaceScreen from "./screens/Admin/AdminMarketplaceScreen";
 
 const Stack = createNativeStackNavigator();
+const AdminStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 function MainTabs() {
   const { isDarkMode } = useTheme();
+  const { isAdmin } = useAuth();
 
   // You can keep the header green (accent) even in dark mode
   const headerBg = "#85FF27";
@@ -39,6 +48,7 @@ function MainTabs() {
             else if (route.name === "Notice Board") iconName = "notifications";
             else if (route.name === "Market Place") iconName = "cart";
             else if (route.name === "Settings") iconName = "settings";
+            else if (route.name === "Admin") iconName = "shield";
             return <Ionicons name={iconName} size={size} color={color} />;
           },
 
@@ -79,6 +89,9 @@ function MainTabs() {
           options={{ title: "Market Place" }}
         />
         <Tab.Screen name="Settings" component={SettingsScreen} />
+        {isAdmin && (
+        <Tab.Screen name="Admin" component={AdminStackScreen} />
+        )}
       </Tab.Navigator>
     </SafeAreaView>
   );
@@ -112,10 +125,25 @@ function AppNavigator() {
   );
 }
 
+function AdminStackScreen() {
+  return (
+    <AdminStack.Navigator screenOptions={{ headerShown: false }}>
+      <AdminStack.Screen name="AdminHome" component={AdminScreen} options={{ title: "Admin" }} />
+      <AdminStack.Screen name="Admin Visitors" component={AdminVisitorsScreen} />
+      <AdminStack.Screen name="Admin Announcements" component={AdminAnnouncementsScreen} />
+      <AdminStack.Screen name="Admin Marketplace" component={AdminMarketplaceScreen} />
+      <AdminStack.Screen name="Admin Add Visitor" component={AdminAddVisitorScreen} />
+      <AdminStack.Screen name="Admin Create Announcement" component={AdminCreateAnnouncementScreen} />
+    </AdminStack.Navigator>
+  );
+}
+
 export default function App() {
   return (
     <ThemeProvider>
-      <AppNavigator />
+      <AuthProvider>
+        <AppNavigator />
+      </AuthProvider>
     </ThemeProvider>
   );
 }

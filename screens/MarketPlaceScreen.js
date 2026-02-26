@@ -28,7 +28,7 @@ export default function MarketPlaceScreen({ navigation }) {
 
   const fetchListings = async () => {
     try {
-      const res = await fetch("http://10.0.2.2:3000/api/market/items");
+      const res = await fetch("http://192.168.43.215:3000/api/market/items");
       const data = await res.json();
 
       const mapped = data.items.map((item) => {

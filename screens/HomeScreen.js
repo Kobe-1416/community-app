@@ -9,7 +9,7 @@ import * as SecureStore from "expo-secure-store";
 import { useTheme } from "../context/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const BASE_URL = "http://10.0.2.2:3000"; // <-- change to your PC IP (e.g. http://192.168.8.107) when testing on a real device
+const BASE_URL = "http://192.168.43.215:3000"; // <-- change to your PC IP (e.g. http://10.2.2.10) when testing on a real device
 const DASHBOARD_ENDPOINT = `${BASE_URL}/api/dashboard`;
 const DASHBOARD_CACHE_KEY = "dashboardCache_v1";
 
@@ -92,7 +92,6 @@ export default function HomeScreen({ navigation }) {
 
       const data = await resp.json();
 
-      // assume `data` comes in right shape; map it into our UI state
       const mapped = {
         gateCode: data.gateCode || null,
         weekEnd: data.weekEnd || null,

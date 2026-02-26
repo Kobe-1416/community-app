@@ -43,7 +43,7 @@ export default function CreateListingScreen({ navigation, route }) {
 
     try {
       setLoading(true);
-      const res = await fetch("http://10.0.2.2:3000/api/market/items", {
+      const res = await fetch("http://192.168.43.215:3000/api/market/items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(listingPayload),
