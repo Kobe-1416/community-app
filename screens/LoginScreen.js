@@ -32,7 +32,7 @@ export default function LoginScreen({ navigation }) {
     setLoading(true);
 
     try {
-      const response = await fetch("http://192.168.43.215:3000/api/auth/login", {
+      const response = await fetch("http://10.100.101.252:3000/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone, password }),
@@ -48,7 +48,7 @@ export default function LoginScreen({ navigation }) {
       await SecureStore.setItemAsync("token", data.token);
 
       // Call /api/auth/me
-      const meResp = await fetch("http://192.168.43.215:3000/api/auth/me", {
+      const meResp = await fetch("http://10.100.101.252:3000/api/auth/me", {
         headers: {
           Authorization: `Bearer ${data.token}`,
         },

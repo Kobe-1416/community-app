@@ -3,7 +3,7 @@ import { View, Text, Pressable, Alert, FlatList } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import Button from "../../components/Button";
 
-const BASE_URL = "http://192.168.43.215:3000";
+const BASE_URL = "http://10.100.101.252:3000";
 
 // If your backend does NOT have /api/visitors/today, easiest: reuse /api/dashboard and read visitorsList.
 const DASHBOARD_ENDPOINT = `${BASE_URL}/api/dashboard`;

@@ -9,7 +9,7 @@ import * as SecureStore from "expo-secure-store";
 import { useTheme } from "../context/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const BASE_URL = "http://192.168.43.215:3000"; // <-- change to your PC IP (e.g. http://10.2.2.10) when testing on a real device
+const BASE_URL = "http://10.100.101.252:3000"; // <-- change to your PC IP (e.g. http://10.2.2.10) when testing on a real device
 const DASHBOARD_ENDPOINT = `${BASE_URL}/api/dashboard`;
 const DASHBOARD_CACHE_KEY = "dashboardCache_v1";
 

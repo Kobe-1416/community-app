@@ -2,7 +2,7 @@ import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
 
-const API_BASE = "http://10.0.2.2:3000";
+const API_BASE = "http://10.100.101.252:3000";
 
 // Recommended: show alerts even when app is foregrounded
 Notifications.setNotificationHandler({

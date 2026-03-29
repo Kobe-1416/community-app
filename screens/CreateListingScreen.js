@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
+import * as SecureStore from "expo-secure-store";
 
 export default function CreateListingScreen({ navigation, route }) {
   const { isDarkMode } = useTheme();
@@ -23,17 +24,45 @@ export default function CreateListingScreen({ navigation, route }) {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (!title || !price || !description || !phone) {
-      Alert.alert("Missing Information", "Please fill in all fields");
+  if (!title || !price || !description || !phone) {
+    Alert.alert("Missing Information", "Please fill in all fields");
+    return;
+  }
+  if (images.length < 3) {
+    Alert.alert("Not enough images", "Please add at least 3 images");
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    // --- FETCH CURRENT USER ID ---
+    const token = await SecureStore.getItemAsync("token");
+    if (!token) {
+      Alert.alert("Not authenticated", "Please log in again.");
       return;
     }
-    if (images.length < 3) {
-      Alert.alert("Not enough images", "Please add at least 3 images");
+    // 10.100.101.252
+    const meResp = await fetch("http://10.100.101.252:3000/api/auth/me", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!meResp.ok) {
+      Alert.alert("Error", "Failed to get user info");
       return;
     }
 
+    const meData = await meResp.json(); 
+    const userId = meData.user?.dbUserId; // use numeric ID from backend
+
+    if (!userId) {
+      Alert.alert("Error", "User ID not found");
+      return;
+    }
+
+    // --- USE DYNAMIC USER ID IN PAYLOAD ---
     const listingPayload = {
-      user_id: 1,
+      user_id: userId, // <-- was previously `user_id` undefined
       prod_name: title.trim(),
       price: parseFloat(price) || 0,
       prod_desc: description.trim(),
@@ -41,49 +70,47 @@ export default function CreateListingScreen({ navigation, route }) {
       images: images,
     };
 
-    try {
-      setLoading(true);
-      const res = await fetch("http://192.168.43.215:3000/api/market/items", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(listingPayload),
-      });
+    const res = await fetch("http://10.100.101.252:3000/api/market/items", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(listingPayload),
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Failed to create listing");
-      }
-
-      const newListing = {
-        id: data.item.id.toString(),
-        title: data.item.prod_name,
-        price: data.item.price,
-        description: data.item.prod_desc,
-        phone: data.item.cell_no,
-        date: data.item.created_at,
-        isNew: true,
-        images: data.item.images || [],
-        thumbnail:
-          data.item.images?.[0] ||
-          `https://via.placeholder.com/300x200/85FF27/000000?text=${encodeURIComponent(
-            title
-          )}`,
-      };
-
-      if (route?.params?.onCreate && typeof route.params.onCreate === "function") {
-        route.params.onCreate(newListing);
-      }
-
-      Alert.alert("Success", "Listing created successfully!");
-      navigation.goBack();
-    } catch (err) {
-      console.error(err);
-      Alert.alert("Error", err.message || "Something went wrong");
-    } finally {
-      setLoading(false);
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || "Failed to create listing");
     }
-  };
+
+    const newListing = {
+      id: data.item.id.toString(),
+      title: data.item.prod_name,
+      price: data.item.price,
+      description: data.item.prod_desc,
+      phone: data.item.cell_no,
+      date: data.item.created_at,
+      isNew: true,
+      images: data.item.images || [],
+      thumbnail:
+        data.item.images?.[0] ||
+        `https://via.placeholder.com/300x200/85FF27/000000?text=${encodeURIComponent(
+          title
+        )}`,
+    };
+
+    if (route?.params?.onCreate && typeof route.params.onCreate === "function") {
+      route.params.onCreate(newListing);
+    }
+
+    Alert.alert("Success", "Listing created successfully!");
+    navigation.goBack();
+  } catch (err) {
+    console.error(err);
+    Alert.alert("Error", err.message || "Something went wrong");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const addImage = () => {
     if (images.length >= 8) {

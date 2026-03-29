@@ -4,7 +4,7 @@ import { View, Text, TextInput, Alert, StyleSheet, Pressable } from "react-nativ
 import * as SecureStore from "expo-secure-store";
 import Button from "../../components/Button";
 
-const BASE_URL = "http://192.168.43.215:3000";
+const BASE_URL = "http://10.100.101.252:3000";
 const CREATE_ENDPOINT = `${BASE_URL}/api/announcements`;
 
 export default function AdminCreateAnnouncementScreen({ navigation }) {

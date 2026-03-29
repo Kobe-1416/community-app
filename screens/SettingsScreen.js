@@ -16,29 +16,33 @@ import { useTheme } from "../context/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { registerForPushAsync, registerDeviceTokenWithServer, syncPushSettingsToServer } from "../notifications/push";
 
-
 export default function SettingsScreen({ navigation }) {
-  // State for settings
   const { isDarkMode, setIsDarkMode } = useTheme();
- const PUSH_KEY = "pref_pushEnabled_v1";
+  const PUSH_KEY = "pref_pushEnabled_v1";
   const SAFETY_KEY = "pref_safetyEnabled_v1";
 
   const [pushEnabled, setPushEnabled] = useState(true);
   const [safetyEnabled, setSafetyEnabled] = useState(false);
-
   const [token, setToken] = useState(null);
+
+  // Form states
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [newPhone, setNewPhone] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isChangingPhone, setIsChangingPhone] = useState(false);
 
   useEffect(() => {
     const loadToken = async () => {
-      const storedToken = await SecureStore.getItemAsync('token'); // use your exact key
+      const storedToken = await SecureStore.getItemAsync('token');
       setToken(storedToken);
       console.log("Loaded token:", storedToken);
     };
-
     loadToken();
   }, []);
 
-    useEffect(() => {
+  useEffect(() => {
     (async () => {
       const p = await AsyncStorage.getItem(PUSH_KEY);
       const s = await AsyncStorage.getItem(SAFETY_KEY);
@@ -47,21 +51,19 @@ export default function SettingsScreen({ navigation }) {
     })();
   }, []);
 
-    const onTogglePush = async (value) => {
+  const onTogglePush = async (value) => {
     try {
       setPushEnabled(value);
       await AsyncStorage.setItem(PUSH_KEY, String(value));
 
       if (value) {
-        // enabling: ensure token exists + registered
         const expoToken = await registerForPushAsync();
         await registerDeviceTokenWithServer(expoToken);
       }
 
       await syncPushSettingsToServer({ pushEnabled: value, safetyEnabled });
     } catch (e) {
-      // revert UI if it fails
-      setPushEnabled((prev) => !prev);
+      setPushEnabled(prev => !prev);
       await AsyncStorage.setItem(PUSH_KEY, String(!value));
       Alert.alert("Notifications", e.message);
     }
@@ -72,9 +74,7 @@ export default function SettingsScreen({ navigation }) {
       setSafetyEnabled(value);
       await AsyncStorage.setItem(SAFETY_KEY, String(value));
 
-      // Safety requires push to be enabled (hard dependency)
       if (value && !pushEnabled) {
-        // Auto-enable push first (or block and ask user)
         const expoToken = await registerForPushAsync();
         await registerDeviceTokenWithServer(expoToken);
         setPushEnabled(true);
@@ -85,112 +85,75 @@ export default function SettingsScreen({ navigation }) {
 
       await syncPushSettingsToServer({ pushEnabled, safetyEnabled: value });
     } catch (e) {
-      setSafetyEnabled((prev) => !prev);
+      setSafetyEnabled(prev => !prev);
       await AsyncStorage.setItem(SAFETY_KEY, String(!value));
       Alert.alert("Safety alerts", e.message);
     }
   };
-  
-  // Form states
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [newPhone, setNewPhone] = useState('');
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [isChangingPhone, setIsChangingPhone] = useState(false);
 
   const handleChangePassword = async () => {
-
-// password: makhe1, number: 0771112221
-
-  console.log("clicked change password", { hasToken: !!token });
-
-  if (newPassword !== confirmPassword) {
-    Alert.alert('Error', 'New passwords do not match');
-    return;
-  }
-
-  if (newPassword.length < 6) {
-    Alert.alert('Error', 'Password must be at least 6 characters');
-    return;
-  }
-
-  try {
-    const res = await fetch('http://10.0.2.2:3000/api/auth/change-password', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        currentPassword,
-        newPassword
-      })
-    });
-
-    const data = await res.json(); // optional but recommended
-
-    console.log('Password change response:', data); // log full response for debugging
-    if (!res.ok) {
-      Alert.alert('Error', data?.message || 'Password change failed');
-      console.log('Password change error:', data);
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Error', 'New passwords do not match');
       return;
     }
-
-    Alert.alert('Success', 'Password changed successfully');
-
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-    setIsChangingPassword(false);
-
-  } catch (error) {
-    Alert.alert('Error', 'Network error. Try again.');
-  }
-};
-
+    if (newPassword.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters');
+      return;
+    }
+    try {
+      const res = await fetch('http://10.100.101.252:3000/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        Alert.alert('Error', data?.message || 'Password change failed');
+        return;
+      }
+      Alert.alert('Success', 'Password changed successfully');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setIsChangingPassword(false);
+    } catch (error) {
+      Alert.alert('Error', 'Network error. Try again.');
+    }
+  };
 
   const handleChangePhone = async () => {
-  if (!/^0[0-9]{9}$/.test(newPhone)) {
-    Alert.alert('Error', 'Enter a valid SA phone number');
-    return;
-  }
-
-  if (!token) {
-    Alert.alert("Error", "Not authenticated");
-    return;
-  }
-
-  try {
-    const res = await fetch('http://10.0.2.2:3000/api/auth/change-phone', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ newPhone }),
-    });
-
-    const data = await res.json();
-    // const text = await res.text();
-    // console.log("RAW RESPONSE:", text);
-
-
-    if (!res.ok) {
-      Alert.alert('Error', data?.message || 'Failed to update phone');
+    if (!/^0[0-9]{9}$/.test(newPhone)) {
+      Alert.alert('Error', 'Enter a valid SA phone number');
       return;
     }
-
-    Alert.alert('Success', 'Phone updated successfully');
-    setNewPhone('');
-    setIsChangingPhone(false);
-
-  } catch (error) {
-    console.log("CHANGE PHONE ERROR:", error);
-    Alert.alert('Error', error?.message || 'Request failed');
-  }
-};
-
+    if (!token) {
+      Alert.alert("Error", "Not authenticated");
+      return;
+    }
+    try {
+      const res = await fetch('http://10.100.101.252:3000/api/auth/change-phone', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ newPhone }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        Alert.alert('Error', data?.message || 'Failed to update phone');
+        return;
+      }
+      Alert.alert('Success', 'Phone updated successfully');
+      setNewPhone('');
+      setIsChangingPhone(false);
+    } catch (error) {
+      Alert.alert('Error', error?.message || 'Request failed');
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -210,9 +173,9 @@ export default function SettingsScreen({ navigation }) {
     <Pressable style={styles.settingItem} onPress={onPress}>
       <View style={styles.settingLeft}>
         <View style={styles.iconContainer}>
-          <Ionicons name={icon} size={22} color="#85FF27" />
+          <Ionicons name={icon} size={22} color={isDarkMode ? "#fff" : "#85FF27"} />
         </View>
-        <Text style={styles.settingTitle}>{title}</Text>
+        <Text style={[styles.settingTitle, isDarkMode && styles.darkText]}>{title}</Text>
       </View>
       {rightComponent}
     </Pressable>
@@ -229,7 +192,7 @@ export default function SettingsScreen({ navigation }) {
         <SettingItem
           icon="person-outline"
           title="Change Password"
-          rightComponent={<Ionicons name="chevron-forward" size={20} color="#666" />}
+          rightComponent={<Ionicons name="chevron-forward" size={20} color={isDarkMode ? "#fff" : "#666"} />}
           onPress={() => setIsChangingPassword(!isChangingPassword)}
         />
 
@@ -238,7 +201,7 @@ export default function SettingsScreen({ navigation }) {
             <TextInput
               style={[styles.input, isDarkMode && styles.darkInput]}
               placeholder="Current Password"
-              placeholderTextColor={isDarkMode ? "#888" : "#999"}
+              placeholderTextColor={isDarkMode ? "#ccc" : "#999"}
               secureTextEntry
               value={currentPassword}
               onChangeText={setCurrentPassword}
@@ -246,7 +209,7 @@ export default function SettingsScreen({ navigation }) {
             <TextInput
               style={[styles.input, isDarkMode && styles.darkInput]}
               placeholder="New Password"
-              placeholderTextColor={isDarkMode ? "#888" : "#999"}
+              placeholderTextColor={isDarkMode ? "#ccc" : "#999"}
               secureTextEntry
               value={newPassword}
               onChangeText={setNewPassword}
@@ -254,22 +217,16 @@ export default function SettingsScreen({ navigation }) {
             <TextInput
               style={[styles.input, isDarkMode && styles.darkInput]}
               placeholder="Confirm New Password"
-              placeholderTextColor={isDarkMode ? "#888" : "#999"}
+              placeholderTextColor={isDarkMode ? "#ccc" : "#999"}
               secureTextEntry
               value={confirmPassword}
               onChangeText={setConfirmPassword}
             />
             <View style={styles.buttonRow}>
-              <TouchableOpacity 
-                style={styles.cancelButton}
-                onPress={() => setIsChangingPassword(false)}
-              >
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setIsChangingPassword(false)}>
                 <Text style={styles.cancelText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.saveButton}
-                onPress={handleChangePassword}
-              >
+              <TouchableOpacity style={styles.saveButton} onPress={handleChangePassword}>
                 <Text style={styles.saveText}>Save</Text>
               </TouchableOpacity>
             </View>
@@ -279,7 +236,7 @@ export default function SettingsScreen({ navigation }) {
         <SettingItem
           icon="call-outline"
           title="Change Phone Number"
-          rightComponent={<Ionicons name="chevron-forward" size={20} color="#666" />}
+          rightComponent={<Ionicons name="chevron-forward" size={20} color={isDarkMode ? "#fff" : "#666"} />}
           onPress={() => setIsChangingPhone(!isChangingPhone)}
         />
 
@@ -288,22 +245,16 @@ export default function SettingsScreen({ navigation }) {
             <TextInput
               style={[styles.input, isDarkMode && styles.darkInput]}
               placeholder="New Phone Number"
-              placeholderTextColor={isDarkMode ? "#888" : "#999"}
+              placeholderTextColor={isDarkMode ? "#ccc" : "#999"}
               keyboardType="phone-pad"
               value={newPhone}
               onChangeText={setNewPhone}
             />
             <View style={styles.buttonRow}>
-              <TouchableOpacity 
-                style={styles.cancelButton}
-                onPress={() => setIsChangingPhone(false)}
-              >
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setIsChangingPhone(false)}>
                 <Text style={styles.cancelText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.saveButton}
-                onPress={handleChangePhone}
-              >
+              <TouchableOpacity style={styles.saveButton} onPress={handleChangePhone}>
                 <Text style={styles.saveText}>Update</Text>
               </TouchableOpacity>
             </View>
@@ -323,7 +274,7 @@ export default function SettingsScreen({ navigation }) {
               value={isDarkMode}
               onValueChange={setIsDarkMode}
               trackColor={{ false: '#767577', true: '#85FF27' }}
-              thumbColor={isDarkMode ? '#000' : '#f4f3f4'}
+              thumbColor={isDarkMode ? '#fff' : '#000'}
             />
           }
         />
@@ -335,21 +286,21 @@ export default function SettingsScreen({ navigation }) {
             <Switch
               value={pushEnabled}
               onValueChange={onTogglePush}
-              trackColor={{ false: "#767577", true: "#85FF27" }}
-              thumbColor={pushEnabled ? "#000" : "#f4f3f4"}
+              trackColor={{ false: "#555", true: "#85FF27" }}
+              thumbColor={pushEnabled ? "#fff" : "#000"}
             />
           }
         />
 
         <SettingItem
           icon="shield-outline"
-          title="Safety Alerts (Visitor entry/exit)"
+          title="Alerts (Visitor entry/exit)"
           rightComponent={
             <Switch
               value={safetyEnabled}
               onValueChange={onToggleSafety}
-              trackColor={{ false: "#767577", true: "#85FF27" }}
-              thumbColor={safetyEnabled ? "#000" : "#f4f3f4"}
+              trackColor={{ false: "#555", true: "#85FF27" }}
+              thumbColor={safetyEnabled ? "#fff" : "#000"}
             />
           }
         />
@@ -362,21 +313,21 @@ export default function SettingsScreen({ navigation }) {
         <SettingItem
           icon="shield-checkmark-outline"
           title="Privacy Policy"
-          rightComponent={<Ionicons name="chevron-forward" size={20} color="#666" />}
+          rightComponent={<Ionicons name="chevron-forward" size={20} color={isDarkMode ? "#fff" : "#666"} />}
           onPress={() => Alert.alert('Privacy Policy', 'Coming soon...')}
         />
 
         <SettingItem
           icon="document-text-outline"
           title="Terms of Service"
-          rightComponent={<Ionicons name="chevron-forward" size={20} color="#666" />}
+          rightComponent={<Ionicons name="chevron-forward" size={20} color={isDarkMode ? "#fff" : "#666"} />}
           onPress={() => Alert.alert('Terms of Service', 'Coming soon...')}
         />
 
         <SettingItem
           icon="help-circle-outline"
           title="Help & Support"
-          rightComponent={<Ionicons name="chevron-forward" size={20} color="#666" />}
+          rightComponent={<Ionicons name="chevron-forward" size={20} color={isDarkMode ? "#fff" : "#666"} />}
           onPress={() => Alert.alert('Support', 'Contact: support@communityapp.co.za')}
         />
       </View>
@@ -416,149 +367,74 @@ export default function SettingsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f8f8',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  darkContainer: {
-    backgroundColor: '#121212',
-  },
-  header: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 30,
-  },
-  darkText: {
-    color: '#fff',
-  },
-  section: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  darkSection: {
-    backgroundColor: '#1e1e1e',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 20,
-  },
-  settingItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  settingLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconContainer: {
-    width: 40,
-    alignItems: 'center',
-  },
-  settingTitle: {
+  container: { 
+    flex: 1, 
+    backgroundColor: 
+    '#f8f8f8', 
+    paddingHorizontal: 20, 
+    paddingTop: 20 },
+  darkContainer: { 
+    backgroundColor: 
+    '#121212' },
+  header: { 
+    fontSize: 32, 
+    fontWeight: 'bold', 
+    color: '#000', 
+    marginBottom: 30 },
+  darkText: { color: '#fff' },
+  section: { 
+    backgroundColor: '#fff', 
+    borderRadius: 12, padding: 20, 
+    marginBottom: 20, shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 2 }, 
+    shadowOpacity: 0.1, 
+    shadowRadius: 4, 
+    elevation: 3 },
+  darkSection: { 
+    backgroundColor: '#1e1e1e' },
+  sectionTitle: { fontSize: 18, 
+    fontWeight: '600', 
+    color: '#000', 
+    marginBottom: 20 },
+  settingItem: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingVertical: 15, 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#f0f0f0' },
+  settingLeft: { 
+    flexDirection: 'row', 
+    alignItems: 'center' },
+  iconContainer: { 
+    width: 40, 
+    alignItems: 'center' },
+  settingTitle: { 
     fontSize: 16,
-    color: '#333',
-    marginLeft: 10,
-  },
-  formContainer: {
-    marginTop: 10,
-    paddingTop: 15,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
-  input: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 10,
-    padding: 15,
-    fontSize: 16,
-    color: '#333',
-    marginBottom: 15,
-  },
-  darkInput: {
-    backgroundColor: '#2a2a2a',
-    color: '#fff',
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 10,
-  },
-  cancelButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ccc',
-  },
-  cancelText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  saveButton: {
-    backgroundColor: '#85FF27',
-    paddingVertical: 10,
-    paddingHorizontal: 25,
-    borderRadius: 8,
-  },
-  saveText: {
-    color: '#000',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  dangerSection: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#ffcccc',
-  },
-  dangerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#ff4444',
-    marginBottom: 20,
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 10,
-  },
-  logoutText: {
-    fontSize: 16,
-    color: '#ff4444',
-    fontWeight: '500',
-    marginLeft: 15,
-  },
-  infoContainer: {
-    alignItems: 'center',
-    paddingVertical: 30,
-  },
-  versionText: {
-    fontSize: 18,
-    color: '#666',
-    fontWeight: '500',
-    marginBottom: 5,
-  },
-  versionNumber: {
-    fontSize: 14,
-    color: '#888',
-  },
+     marginLeft: 10 },
+  formContainer: { 
+    marginTop: 10, 
+    paddingTop: 15, 
+    borderTopWidth: 1, 
+    borderTopColor: '#f0f0f0' },
+  input: { 
+    backgroundColor: '#f5f5f5', 
+    borderRadius: 10, 
+    padding: 15, 
+    fontSize: 16, 
+    color: '#333', 
+    marginBottom: 15 },
+  darkInput: { backgroundColor: '#2a2a2a', color: '#fff' },
+  buttonRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
+  cancelButton: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, borderWidth: 1, borderColor: '#ccc' },
+  cancelText: { fontSize: 16, fontWeight: '500', color: '#666' },
+  saveButton: { backgroundColor: '#85FF27', paddingVertical: 10, paddingHorizontal: 25, borderRadius: 8 },
+  saveText: { fontSize: 16, fontWeight: 'bold', color: '#000' },
+  dangerSection: { backgroundColor: '#fff', borderRadius: 12, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: '#ffcccc' },
+  dangerTitle: { fontSize: 18, fontWeight: '600', color: '#ff4444', marginBottom: 20 },
+  logoutButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, paddingHorizontal: 10 },
+  logoutText: { fontSize: 16, color: '#ff4444', fontWeight: '500', marginLeft: 15 },
+  infoContainer: { alignItems: 'center', paddingVertical: 30 },
+  versionText: { fontSize: 18, fontWeight: '500', marginBottom: 5, color: '#666' },
+  versionNumber: { fontSize: 14, color: '#888' },
 });
