@@ -18,7 +18,7 @@ export default function NoticeBoardScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [announcements, setAnnouncements] = useState([]);
 
-  const BASE_URL = `http://${API_URL}:3000`;
+  const BASE_URL = `${API_URL}`;
 
   const fetchAnnouncements = async () => {
     try {

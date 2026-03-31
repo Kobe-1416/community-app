@@ -3,9 +3,9 @@ import React, { useState } from "react";
 import { View, Text, TextInput, Alert, StyleSheet, Pressable } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import Button from "../../components/Button";
-import { API_URL } from '../config';
+import { API_URL } from '../../config';
 
-const BASE_URL = `http://${API_URL}:3000`;
+const BASE_URL = `${API_URL}`;
 const CREATE_ENDPOINT = `${BASE_URL}/api/announcements`;
 
 export default function AdminCreateAnnouncementScreen({ navigation }) {

@@ -102,7 +102,7 @@ export default function SettingsScreen({ navigation }) {
       return;
     }
     try {
-      const res = await fetch(`http://${API_URL}:3000/api/auth/change-password`, {
+      const res = await fetch(`${API_URL}/api/auth/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -135,7 +135,7 @@ export default function SettingsScreen({ navigation }) {
       return;
     }
     try {
-      const res = await fetch(`http://${API_URL}:3000/api/auth/change-phone`, {
+      const res = await fetch(`${API_URL}/api/auth/change-phone`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

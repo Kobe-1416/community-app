@@ -3,7 +3,7 @@ import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
 import { API_URL } from '../config';
 
-const API_BASE = `http://${API_URL}:3000`;
+const API_BASE = `${API_URL}`;
 
 // Recommended: show alerts even when app is foregrounded
 Notifications.setNotificationHandler({

@@ -29,7 +29,7 @@ export default function MarketPlaceScreen({ navigation }) {
 
   const fetchListings = async () => {
     try {
-      const res = await fetch(`http://${API_URL}:3000/api/market/items`);
+      const res = await fetch(`${API_URL}/api/market/items`);
       const data = await res.json();
 
       const mapped = data.items.map((item) => {

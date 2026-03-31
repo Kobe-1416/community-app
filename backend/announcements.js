@@ -3,6 +3,7 @@ const express = require("express");
 const router = express.Router();
 const pool = require("./db");
 const { sendExpoPush } = require("./services/pushService");
+const authenticateToken = require("./middleware/auth");
 
 // Create a new announcement (+ send push)
 router.post("/", async (req, res) => {
@@ -78,6 +79,26 @@ router.delete("/cleanup", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+router.delete("/:id", authenticateToken, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(
+      `DELETE FROM announcements WHERE id = $1 RETURNING id`,
+      [id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "Announcement not found" });
+    }
+
+    res.json({ success: true, message: "Deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 

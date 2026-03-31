@@ -5,6 +5,8 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native";
+import { registerForPushAsync, registerDeviceTokenWithServer } from "./notifications/push";
+import { useEffect } from "react";
 
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -139,6 +141,23 @@ function AdminStackScreen() {
 }
 
 export default function App() {
+  useEffect(() => {
+    const setupPush = async () => {
+      try {
+        const expoPushToken = await registerForPushAsync();
+        console.log("TOKEN:", expoPushToken);
+
+        if (expoPushToken) {
+          await registerDeviceTokenWithServer(expoPushToken);
+        }
+      } catch (err) {
+        console.log("Push setup error:", err.message);
+      }
+    };
+
+    setupPush();
+  }, []);
+
   return (
     <ThemeProvider>
       <AuthProvider>

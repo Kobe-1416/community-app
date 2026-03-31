@@ -44,7 +44,7 @@ export default function CreateListingScreen({ navigation, route }) {
       return;
     }
     // &{API_URL}
-    const meResp = await fetch(`http://${API_URL}:3000/api/auth/me`, {
+    const meResp = await fetch(`${API_URL}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -71,7 +71,7 @@ export default function CreateListingScreen({ navigation, route }) {
       images: images,
     };
 
-    const res = await fetch(`http://${API_URL}:3000/api/market/items`, {
+    const res = await fetch(`${API_URL}/api/market/items`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(listingPayload),

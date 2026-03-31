@@ -33,12 +33,12 @@ export default function LoginScreen({ navigation }) {
     setLoading(true);
 
     try {
-      const response = await fetch(`http://${API_URL}:3000/api/auth/login`, {
+      const response = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone, password }),
       });
-
+      console.log("LOGIN RESPONSE STATUS:", response.status);
       const data = await response.json();
 
       if (!response.ok) {
@@ -49,7 +49,7 @@ export default function LoginScreen({ navigation }) {
       await SecureStore.setItemAsync("token", data.token);
 
       // Call /api/auth/me
-      const meResp = await fetch(`http://${API_URL}:3000/api/auth/me`, {
+      const meResp = await fetch(`${API_URL}/api/auth/me`, {
         headers: {
           Authorization: `Bearer ${data.token}`,
         },

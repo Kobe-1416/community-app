@@ -2,7 +2,7 @@ import React from "react";
 import { ScrollView, View, Text, StyleSheet } from "react-native";
 import PressableCard from "../../components/PressableCard";
 import { useTheme } from "../../context/ThemeContext";
-import { API_URL } from '../config';
+import { API_URL } from '../../config';
 
 export default function AdminScreen({ navigation }) {
   const { isDarkMode } = useTheme();

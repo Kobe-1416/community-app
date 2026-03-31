@@ -2,9 +2,9 @@ import React, { useState } from "react";
 import { View, TextInput, Alert } from "react-native";
 import Button from "../../components/Button";
 import * as SecureStore from "expo-secure-store";
-import { API_URL } from '../config';
+import { API_URL } from '../../config';
 
-const BASE_URL = `http://${API_URL}:3000`; // use your PC IP
+const BASE_URL = `${API_URL}`; // use your PC IP
 const ADD_VISITOR_ENDPOINT = `${BASE_URL}/api/visitors/entry`;
 
 export default function AdminAddVisitorScreen({ navigation }) {

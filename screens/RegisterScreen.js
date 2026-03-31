@@ -24,7 +24,7 @@ export default function RegisterScreen({ navigation }) {
 
   const handleRegister = async () => {
     try{
-      const response = await fetch(`http://${API_URL}:3000/api/auth/register`, {
+      const response = await fetch(`${API_URL}/api/auth/register`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
