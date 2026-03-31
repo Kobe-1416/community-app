@@ -3,8 +3,9 @@ import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, Pressable, Alert, FlatList, StyleSheet, ActivityIndicator } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import Button from "../../components/Button";
+import { API_URL } from '../config';
 
-const BASE_URL = "http://10.100.101.252:3000";
+const BASE_URL = `http://${API_URL}:3000`;
 const LIST_ENDPOINT = `${BASE_URL}/api/market/items`;
 // Assumed delete: DELETE /api/market/items/:id
 const DELETE_ENDPOINT = (id) => `${BASE_URL}/api/market/items/${id}`;

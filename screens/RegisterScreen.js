@@ -11,6 +11,7 @@ import {
 import Button from "../components/Button";
 import Header from "../components/Header";
 import React, { useState } from "react";
+import { API_URL } from '../config';
 
   
 export default function RegisterScreen({ navigation }) {
@@ -23,8 +24,7 @@ export default function RegisterScreen({ navigation }) {
 
   const handleRegister = async () => {
     try{
-      const response = await fetch("http://10.100.101.252:3000/api/auth/register",
-        {
+      const response = await fetch(`http://${API_URL}:3000/api/auth/register`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

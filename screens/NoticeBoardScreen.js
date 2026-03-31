@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { API_URL } from '../config';
 import {
   View,
   StyleSheet,
@@ -17,7 +18,7 @@ export default function NoticeBoardScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [announcements, setAnnouncements] = useState([]);
 
-  const BASE_URL = "http://10.100.101.252:3000";
+  const BASE_URL = `http://${API_URL}:3000`;
 
   const fetchAnnouncements = async () => {
     try {

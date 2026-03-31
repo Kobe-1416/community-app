@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { API_URL } from '../config';
 import {
   View,
   StyleSheet,
@@ -28,7 +29,7 @@ export default function MarketPlaceScreen({ navigation }) {
 
   const fetchListings = async () => {
     try {
-      const res = await fetch("http://10.100.101.252:3000/api/market/items");
+      const res = await fetch(`http://${API_URL}:3000/api/market/items`);
       const data = await res.json();
 
       const mapped = data.items.map((item) => {

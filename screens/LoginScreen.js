@@ -13,6 +13,7 @@ import React, { useState } from "react";
 import * as SecureStore from "expo-secure-store";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
+import { API_URL } from '../config';
 
 export default function LoginScreen({ navigation }) {
   const { isDarkMode } = useTheme();
@@ -32,7 +33,7 @@ export default function LoginScreen({ navigation }) {
     setLoading(true);
 
     try {
-      const response = await fetch("http://10.100.101.252:3000/api/auth/login", {
+      const response = await fetch(`http://${API_URL}:3000/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone, password }),
@@ -48,7 +49,7 @@ export default function LoginScreen({ navigation }) {
       await SecureStore.setItemAsync("token", data.token);
 
       // Call /api/auth/me
-      const meResp = await fetch("http://10.100.101.252:3000/api/auth/me", {
+      const meResp = await fetch(`http://${API_URL}:3000/api/auth/me`, {
         headers: {
           Authorization: `Bearer ${data.token}`,
         },

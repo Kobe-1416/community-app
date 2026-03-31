@@ -12,6 +12,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
 import * as SecureStore from "expo-secure-store";
+import { API_URL } from '../config';
 
 export default function CreateListingScreen({ navigation, route }) {
   const { isDarkMode } = useTheme();
@@ -42,8 +43,8 @@ export default function CreateListingScreen({ navigation, route }) {
       Alert.alert("Not authenticated", "Please log in again.");
       return;
     }
-    // 10.100.101.252
-    const meResp = await fetch("http://10.100.101.252:3000/api/auth/me", {
+    // &{API_URL}
+    const meResp = await fetch(`http://${API_URL}:3000/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -70,7 +71,7 @@ export default function CreateListingScreen({ navigation, route }) {
       images: images,
     };
 
-    const res = await fetch("http://10.100.101.252:3000/api/market/items", {
+    const res = await fetch(`http://${API_URL}:3000/api/market/items`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(listingPayload),

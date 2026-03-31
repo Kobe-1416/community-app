@@ -15,6 +15,7 @@ import * as SecureStore from "expo-secure-store";
 import { useTheme } from "../context/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { registerForPushAsync, registerDeviceTokenWithServer, syncPushSettingsToServer } from "../notifications/push";
+import { API_URL } from '../config';
 
 export default function SettingsScreen({ navigation }) {
   const { isDarkMode, setIsDarkMode } = useTheme();
@@ -101,7 +102,7 @@ export default function SettingsScreen({ navigation }) {
       return;
     }
     try {
-      const res = await fetch('http://10.100.101.252:3000/api/auth/change-password', {
+      const res = await fetch(`http://${API_URL}:3000/api/auth/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -134,7 +135,7 @@ export default function SettingsScreen({ navigation }) {
       return;
     }
     try {
-      const res = await fetch('http://10.100.101.252:3000/api/auth/change-phone', {
+      const res = await fetch(`http://${API_URL}:3000/api/auth/change-phone`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
