@@ -149,8 +149,8 @@ export default function AdminMarketplaceScreen() {
               <Text>No marketplace items found.</Text>
             </View>
           }
-          onRefresh={fetchItems}
-          refreshing={loadingList}
+          onRefresh={fetchItems}      // <-- this enables pull-down refresh
+          refreshing={loadingList}    // <-- controls the spinner
         />
       )}
 

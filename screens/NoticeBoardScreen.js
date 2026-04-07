@@ -134,11 +134,10 @@ export default function NoticeBoardScreen() {
         data={filteredAnnouncements}
         renderItem={({ item }) => <AnnouncementCard item={item} />}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={[
-          styles.listContainer,
-          isDarkMode && styles.listContainerDark,
-        ]}
+        contentContainerStyle={[styles.listContainer, isDarkMode && styles.listContainerDark]}
         showsVerticalScrollIndicator={false}
+        onRefresh={fetchAnnouncements} // triggers fetchAnnouncements
+        refreshing={false}             // set to true if you want a loading spinner
       />
 
       <Pressable

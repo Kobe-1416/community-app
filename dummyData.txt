@@ -1,2 +1,27 @@
 Passwords for com_users:
 0773332222 - matha
+0771112222 - makhetha
+0661112222 - mazda - 7111 - Isazi
+0662223333 - banded - 7222 - Isazi
+0665551111 - popular - 7333 - Armband
+0775559999 - girton - 7171 - Armband
+0662227777 - andrews - 7272 - Armband
+0884441111 - jorrissen - 7373 -Leobu
+0881113333 - melridge - 7474 - Leobu
+0778889999 - business_ - 7000 - Isazi
+0771113333 - bando [B] - 7444 - Isazi
+0882223333 - apartment [?] - 7001 - _
+
+
+
+Registering:
+1. Same time submit of registration, is handled properly [Both are registered] (2 phones simultaneously)
+2. Same time submit of registration same details, is handled properly [Alert phone already exists] (2 phones simultaneously)
+3. White space in surname or password is taken as part of the input string
+4. Wrong error message for duplicate house number registering, it says phone exists and not house exists. I currently changed it to "User with similar details exists"
+5. Incorrect cred or pass does not work
+6. Single letter password accepted
+7. Long house number returns "server error" alert message
+8. Long ass text for street name is accepted in the input by returns alert "server error"
+9. Single white space accepted as street name, special chars accepted by Passwords
+10. Listing accepts very short string and doesn't take long string, it returns server error because my db knows how much text is max.

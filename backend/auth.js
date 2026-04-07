@@ -42,7 +42,7 @@ router.post("/register", async (req, res) => {
     console.error(err);
     // 4️⃣ Handle duplicate phone
     if (err.code === "23505") {
-      return res.status(400).json({ success: false, message: "Phone already registered" });
+      return res.status(400).json({ success: false, message: "User with similar details exists" });
     }
     res.status(500).json({ success: false, message: "Server error" });
   }

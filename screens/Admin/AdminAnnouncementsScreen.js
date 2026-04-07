@@ -146,8 +146,8 @@ export default function AdminAnnouncementsScreen({ navigation }) {
               <Text>No announcements yet.</Text>
             </View>
           }
-          onRefresh={fetchAnnouncements}
-          refreshing={loadingList}
+          onRefresh={fetchAnnouncements}    // pull-to-refresh
+          refreshing={loadingList}          // spinner while fetching
         />
       )}
 

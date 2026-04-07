@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
+import * as ImagePicker from "expo-image-picker";
 import * as SecureStore from "expo-secure-store";
 import { API_URL } from '../config';
 
@@ -25,105 +26,214 @@ export default function CreateListingScreen({ navigation, route }) {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-  if (!title || !price || !description || !phone) {
-    Alert.alert("Missing Information", "Please fill in all fields");
-    return;
-  }
-  if (images.length < 3) {
-    Alert.alert("Not enough images", "Please add at least 3 images");
-    return;
-  }
+    console.log("handleSubmit triggered");
 
-  try {
-    setLoading(true);
-
-    // --- FETCH CURRENT USER ID ---
-    const token = await SecureStore.getItemAsync("token");
-    if (!token) {
-      Alert.alert("Not authenticated", "Please log in again.");
-      return;
-    }
-    // &{API_URL}
-    const meResp = await fetch(`${API_URL}/api/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (!meResp.ok) {
-      Alert.alert("Error", "Failed to get user info");
+    if (!title || !price || !description || !phone) {
+      Alert.alert("Missing Information", "Please fill in all fields");
       return;
     }
 
-    const meData = await meResp.json(); 
-    const userId = meData.user?.dbUserId; // use numeric ID from backend
-
-    if (!userId) {
-      Alert.alert("Error", "User ID not found");
+    if (images.length < 3) {
+      Alert.alert("Not enough images", "Please add at least 3 images");
       return;
     }
 
-    // --- USE DYNAMIC USER ID IN PAYLOAD ---
-    const listingPayload = {
-      user_id: userId, // <-- was previously `user_id` undefined
-      prod_name: title.trim(),
-      price: parseFloat(price) || 0,
-      prod_desc: description.trim(),
-      cell_no: phone.trim(),
-      images: images,
-    };
+    console.log("Validation passed");
 
-    const res = await fetch(`${API_URL}/api/market/items`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(listingPayload),
-    });
+    try {
+      setLoading(true);
 
-    const data = await res.json();
+      // --- GET TOKEN ---
+      const token = await SecureStore.getItemAsync("token");
+      console.log("Token:", token);
 
-    if (!res.ok || !data.success) {
-      throw new Error(data.message || "Failed to create listing");
+      if (!token) {
+        Alert.alert("Not authenticated", "Please log in again.");
+        return;
+      }
+
+      // --- FETCH USER ---
+      console.log("Calling /auth/me");
+
+      const meResp = await fetch(`${API_URL}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      console.log("User response status:", meResp.status);
+
+      if (!meResp.ok) {
+        throw new Error("Failed to get user info");
+      }
+
+      const meData = await meResp.json();
+      console.log("User data:", meData);
+
+      const userId = meData.user?.dbUserId;
+
+      if (!userId) {
+        throw new Error("User ID not found");
+      }
+
+      // --- UPLOAD IMAGES FIRST ---
+      console.log("Images array:", images);
+      console.log("Starting upload loop");
+
+      const uploadedImages = [];
+
+      for (let img of images) {
+        if (img.startsWith("http")) {
+          uploadedImages.push(img);
+          continue;
+        }
+
+        console.log("Uploading image:", img);
+        console.log("Uploading to:", `${API_URL}/api/upload`);
+
+        const formData = new FormData();
+        formData.append("image", {
+          uri: img,
+          name: "photo.jpg",
+          type: "image/jpeg",
+        });
+
+        const uploadRes = await fetch(`${API_URL}/api/upload`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            // ❌ DO NOT set Content-Type manually
+          },
+          body: formData,
+        });
+
+        console.log("Upload response status:", uploadRes.status);
+
+        const rawText = await uploadRes.text();
+        console.log("Raw upload response:", rawText);
+
+        let uploadData;
+        try {
+          uploadData = JSON.parse(rawText);
+        } catch {
+          throw new Error("Upload response is not valid JSON");
+        }
+
+        console.log("Upload response data:", uploadData);
+
+        if (!uploadRes.ok || !uploadData.url) {
+          throw new Error(uploadData.message || "Image upload failed");
+        }
+
+        uploadedImages.push(uploadData.url);
+      }
+
+
+      // --- CREATE LISTING ---
+      const listingPayload = {
+        user_id: userId,
+        prod_name: title.trim(),
+        price: parseFloat(price) || 0,
+        prod_desc: description.trim(),
+        cell_no: phone.trim(),
+        images: uploadedImages,
+      };
+
+      const res = await fetch(`${API_URL}/api/market/items`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(listingPayload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to create listing");
+      }
+
+      // --- FORMAT NEW LISTING ---
+      const newListing = {
+        id: data.item.id.toString(),
+        title: data.item.prod_name,
+        price: data.item.price,
+        description: data.item.prod_desc,
+        phone: data.item.cell_no,
+        date: data.item.created_at,
+        isNew: true,
+        images: data.item.images || [],
+        thumbnail:
+          data.item.images?.[0] ||
+          `https://via.placeholder.com/300x200/85FF27/000000?text=${encodeURIComponent(title)}`,
+      };
+
+      if (route?.params?.onCreate && typeof route.params.onCreate === "function") {
+        route.params.onCreate(newListing);
+      }
+
+      Alert.alert("Success", "Listing created successfully!");
+      navigation.goBack();
+
+    } catch (err) {
+      console.error("ERROR:", err);
+      Alert.alert("Error", err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const newListing = {
-      id: data.item.id.toString(),
-      title: data.item.prod_name,
-      price: data.item.price,
-      description: data.item.prod_desc,
-      phone: data.item.cell_no,
-      date: data.item.created_at,
-      isNew: true,
-      images: data.item.images || [],
-      thumbnail:
-        data.item.images?.[0] ||
-        `https://via.placeholder.com/300x200/85FF27/000000?text=${encodeURIComponent(
-          title
-        )}`,
-    };
-
-    if (route?.params?.onCreate && typeof route.params.onCreate === "function") {
-      route.params.onCreate(newListing);
-    }
-
-    Alert.alert("Success", "Listing created successfully!");
-    navigation.goBack();
-  } catch (err) {
-    console.error(err);
-    Alert.alert("Error", err.message || "Something went wrong");
-  } finally {
-    setLoading(false);
-  }
-};
-
-  const addImage = () => {
+  const addImage = async () => {
     if (images.length >= 8) {
       Alert.alert("Maximum Reached", "You can only upload up to 8 images");
       return;
     }
-    setImages([
-      ...images,
-      `https://via.placeholder.com/300x200/85FF27/000000?text=Image+${
-        images.length + 1
-      }`,
-    ]);
+
+    // Request permission
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      Alert.alert("Permission required", "Allow access to your photos.");
+      return;
+    }
+
+    // Launch picker
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.7,
+    });
+
+    if (!result.canceled) {
+      const selectedImage = result.assets[0].uri;
+
+      // TEMP: store local URI (we’ll upload later)
+      setImages([...images, selectedImage]);
+    }
+  };
+
+  const uploadImage = async (uri, token) => {
+    const formData = new FormData();
+
+    formData.append("image", {
+      uri,
+      name: "photo.jpg",
+      type: "image/jpeg",
+    });
+
+    const res = await fetch(`${API_URL}/api/upload`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      },
+      body: formData,
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) throw new Error("Image upload failed");
+
+    return data.url; // backend should return hosted URL
   };
 
   const removeImage = (index) => {

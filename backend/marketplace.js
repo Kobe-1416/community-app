@@ -8,7 +8,7 @@ const pool = require('./db'); // adjust path
 router.get('/items', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, user_id, prod_name, prod_desc, price, created_at, cell_no
+      `SELECT id, user_id, prod_name, prod_desc, price, created_at, cell_no, images
        FROM market
        ORDER BY created_at DESC`
     );
@@ -26,18 +26,17 @@ router.get('/items', async (req, res) => {
 ========================= */
 router.post('/items', async (req, res) => {
   try {
-    const { user_id, prod_name, prod_desc, price, cell_no } = req.body;
+    const { user_id, prod_name, prod_desc, price, cell_no, images } = req.body;
 
-    // Basic validation
     if (!user_id || !prod_name || !price) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
     const result = await pool.query(
-      `INSERT INTO market (user_id, prod_name, prod_desc, price, cell_no, created_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())
+      `INSERT INTO market (user_id, prod_name, prod_desc, price, cell_no, images, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
        RETURNING *`,
-      [user_id, prod_name, prod_desc, price, cell_no]
+      [user_id, prod_name, prod_desc, price, cell_no, JSON.stringify(images)]
     );
 
     res.status(201).json({ success: true, item: result.rows[0] });

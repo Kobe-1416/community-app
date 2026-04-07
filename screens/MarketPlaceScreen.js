@@ -15,6 +15,7 @@ import { useTheme } from "../context/ThemeContext";
 export default function MarketPlaceScreen({ navigation }) {
   const { isDarkMode } = useTheme();
   const [listings, setListings] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -28,31 +29,35 @@ export default function MarketPlaceScreen({ navigation }) {
   };
 
   const fetchListings = async () => {
+    setLoading(true);
     try {
       const res = await fetch(`${API_URL}/api/market/items`);
       const data = await res.json();
 
       const mapped = data.items.map((item) => {
-        const createdDate = new Date(item.created_at);
-        const now = new Date();
-        const diffDays = Math.floor((now - createdDate) / (1000 * 60 * 60 * 24));
+          const createdDate = new Date(item.created_at);
+          const now = new Date();
+          const diffDays = Math.floor((now - createdDate) / (1000 * 60 * 60 * 24));
 
-        return {
-          id: item.id.toString(),
-          title: item.prod_name,
-          description: item.prod_desc,
-          price: item.price,
-          phone: item.cell_no,
-          date: item.created_at,
-          isNew: diffDays <= 2,
-          thumbnail:
-            "https://via.placeholder.com/300x200/CCCCCC/000000?text=Item",
-        };
-      });
+          console.log('item.images:', item.images);
+
+          return {
+            id: item.id.toString(),
+            title: item.prod_name,
+            description: item.prod_desc,
+            price: item.price,
+            phone: item.cell_no,
+            date: item.created_at,
+            isNew: diffDays <= 2,
+            thumbnail: item.images?.[0] || "https://via.placeholder.com/300x200/CCCCCC/000000?text=Item",
+          };
+        });
 
       setListings(mapped);
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -130,11 +135,10 @@ export default function MarketPlaceScreen({ navigation }) {
         keyExtractor={(item) => item.id}
         numColumns={2}
         columnWrapperStyle={styles.row}
-        contentContainerStyle={[
-          styles.listContainer,
-          isDarkMode && styles.listContainerDark,
-        ]}
+        contentContainerStyle={[styles.listContainer, isDarkMode && styles.listContainerDark]}
         showsVerticalScrollIndicator={false}
+        onRefresh={fetchListings}     // <-- pull-to-refresh
+        refreshing={loading}           // <-- loading spinner
       />
 
       <Pressable
@@ -142,7 +146,7 @@ export default function MarketPlaceScreen({ navigation }) {
         onPress={() =>
           navigation.navigate("CreateListing", {
             onCreate: (newListing) => {
-              setListings((prev) => [newListing, ...prev]);
+              setListings((prev) => [newListing, ...prev]);  // prepend new item
             },
           })
         }

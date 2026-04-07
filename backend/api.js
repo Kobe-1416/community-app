@@ -9,7 +9,9 @@ const announcementsRouter = require("./announcements");
 const dashboardRouter = require("./dashboard");
 const marketplaceRouter = require("./marketplace"); 
 const notificationsRouter = require("./notifications");
+const uploadRouter = require("./upload");
 
+router.use("/upload", uploadRouter);
 router.use("/auth", authRouter);
 router.use("/visitors", visitorsRouter);
 router.use("/gate-codes", gateCodesRouter);
