@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import Button from "../components/Button";
 import Header from "../components/Header";
+import * as SecureStore from "expo-secure-store";
 import React, { useState } from "react";
 import { API_URL } from '../config';
 
@@ -23,30 +24,51 @@ export default function RegisterScreen({ navigation }) {
   const [password, setPassword] = useState("");
 
   const handleRegister = async () => {
-    try{
+    try {
       const response = await fetch(`${API_URL}/api/auth/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          surname,
+          house_number: houseNumber,
+          street_name: streetName,
+          phone,
+          password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // ✅ NEW: login immediately after register
+        const loginResp = await fetch(`${API_URL}/api/auth/login`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            surname,
-            house_number: houseNumber,
-            street_name: streetName,
-            phone,
+            phone,      // or whatever your login uses
             password,
           }),
-          });
+        });
 
-      const data = await response.json();
-      if(data.success){
-        alert("Registration successful!");
-        navigation.replace("MainTabs"); // navigate to main screen
-      }
-      else{
+        const loginData = await loginResp.json();
+
+        if (!loginData.token) {
+          alert("Login failed after registration");
+          return;
+        }
+
+        // ✅ CRITICAL FIX
+        await SecureStore.setItemAsync("token", loginData.token);
+
+        navigation.replace("MainTabs"); // now safe
+      } else {
         alert(data.message);
       }
-    }catch(err){
+    } catch (err) {
       console.error(err);
       alert("Something went wrong. Check server.");
     }

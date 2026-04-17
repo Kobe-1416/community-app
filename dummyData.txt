@@ -1,8 +1,22 @@
-Passwords for com_users:
+Passwords for com_users local:
 0773332222 - matha
 0771112222 - makhetha
 0661112222 - mazda - 7111 - Isazi
 0662223333 - banded - 7222 - Isazi
+0665551111 - popular - 7333 - Armband
+0775559999 - girton - 7171 - Armband
+0662227777 - andrews - 7272 - Armband
+0884441111 - jorrissen - 7373 -Leobu
+0881113333 - melridge - 7474 - Leobu
+0778889999 - business_ - 7000 - Isazi
+0771113333 - bando [B] - 7444 - Isazi
+0882223333 - apartment [?] - 7001 - _
+
+Passwords for com_users remote:
+0773332222 - mathatha - 7772
+0771112222 - matha - 7222
+0661112222 - mazda - 7122 - Isazi
+0662223333 - banded - 7111 - Isazi
 0665551111 - popular - 7333 - Armband
 0775559999 - girton - 7171 - Armband
 0662227777 - andrews - 7272 - Armband
