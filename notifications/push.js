@@ -15,7 +15,7 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// 1️⃣ Get Expo Push Token (FIXED: projectId included)
+// 1️⃣ Get Expo Push Token
 export async function getExpoPushToken() {
   if (!Device.isDevice) {
     throw new Error("Push notifications require a physical device.");
@@ -53,10 +53,8 @@ export async function getExpoPushToken() {
   return token;
 }
 
-// 2️⃣ Register token with backend (unchanged logic, just cleaner)
-export async function registerDeviceTokenWithServer(
-  expoPushToken: string
-) {
+// 2️⃣ Register token with backend
+export async function registerDeviceTokenWithServer(expoPushToken) {
   const token = await SecureStore.getItemAsync("token");
   if (!token) throw new Error("Not authenticated");
 
@@ -85,13 +83,10 @@ export async function registerDeviceTokenWithServer(
   return true;
 }
 
-// 3️⃣ Preferences (unchanged)
+// 3️⃣ Preferences
 export async function syncPushSettingsToServer({
   pushEnabled,
   safetyEnabled,
-}: {
-  pushEnabled: boolean;
-  safetyEnabled: boolean;
 }) {
   const token = await SecureStore.getItemAsync("token");
   if (!token) throw new Error("Not authenticated");
@@ -115,13 +110,15 @@ export async function syncPushSettingsToServer({
   const data = JSON.parse(raw);
 
   if (!data.success) {
-    throw new Error(data?.message || "Failed to save notification preferences");
+    throw new Error(
+      data?.message || "Failed to save notification preferences"
+    );
   }
 
   return true;
 }
 
-// 4️⃣ ✅ SINGLE ENTRY POINT (THIS IS WHAT YOU WERE MISSING)
+// 4️⃣ Single entry point
 export async function setupPushNotifications() {
   // Step A: ensure auth is valid
   const token = await SecureStore.getItemAsync("token");

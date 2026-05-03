@@ -1,7 +1,7 @@
 const { Expo } = require("expo-server-sdk");
 const expo = new Expo();
 
-export async function sendExpoPush(tokens, message) {
+async function sendExpoPush(tokens, message) {
   // tokens: array of expo tokens
   const chunks = expo.chunkPushNotifications(
     tokens
