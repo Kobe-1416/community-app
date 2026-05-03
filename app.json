@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "MyApp",
-    "slug": "MyApp",
+    "slug": "communityconnect",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#85FF27"
     },
     "ios": {
       "supportsTablet": true
@@ -18,7 +18,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#85FF27"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.anonymous.MyApp"
@@ -29,6 +29,12 @@
     "plugins": [
       "expo-secure-store",
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "87907623-fc98-4cdc-bd4c-994ff1cb0ad2"
+      }
+    },
+    "owner": "comprojcobe"
   }
 }

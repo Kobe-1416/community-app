@@ -1,11 +1,12 @@
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
-import { API_URL } from '../config';
+import Constants from "expo-constants";
+import { API_URL } from "../config";
 
 const API_BASE = `${API_URL}`;
 
-// Recommended: show alerts even when app is foregrounded
+// Foreground behavior
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -14,17 +15,19 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export async function registerForPushAsync() {
+// 1️⃣ Get Expo Push Token (FIXED: projectId included)
+export async function getExpoPushToken() {
   if (!Device.isDevice) {
-    // Push notifications don’t work on emulators reliably
     throw new Error("Push notifications require a physical device.");
   }
 
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  const { status: existingStatus } =
+    await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
 
   if (existingStatus !== "granted") {
-    const { status } = await Notifications.requestPermissionsAsync();
+    const { status } =
+      await Notifications.requestPermissionsAsync();
     finalStatus = status;
   }
 
@@ -32,48 +35,28 @@ export async function registerForPushAsync() {
     throw new Error("Notification permission not granted.");
   }
 
-  // Expo push token
-  const token = (await Notifications.getExpoPushTokenAsync()).data;
+  const projectId =
+    Constants.expoConfig?.extra?.eas?.projectId;
+
+  if (!projectId) {
+    throw new Error("Missing projectId in app config.");
+  }
+
+  const token = (
+    await Notifications.getExpoPushTokenAsync({
+      projectId,
+    })
+  ).data;
+
+  console.log("TOKEN:", token);
+
   return token;
 }
 
-export async function syncPushSettingsToServer({ pushEnabled, safetyEnabled }) {
-  const token = await SecureStore.getItemAsync("token");
-  if (!token) throw new Error("Not authenticated");
-
-  const res = await fetch(`${API_BASE}/api/notifications/preferences`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ pushEnabled, safetyEnabled }),
-  });
-
-  const raw = await res.text();
-  console.log("PREFS RAW:", raw);
-
-  // If server returned HTML or an error status, throw with raw so you can see it
-  if (!res.ok) {
-    throw new Error(raw || `Request failed (${res.status})`);
-  }
-
-  // Parse JSON safely
-  let data;
-  try {
-    data = JSON.parse(raw);
-  } catch {
-    throw new Error("Expected JSON but got non-JSON response.");
-  }
-
-  if (!data.success) {
-    throw new Error(data?.message || "Failed to save notification preferences");
-  }
-
-  return true;
-}
-
-export async function registerDeviceTokenWithServer(expoPushToken) {
+// 2️⃣ Register token with backend (unchanged logic, just cleaner)
+export async function registerDeviceTokenWithServer(
+  expoPushToken: string
+) {
   const token = await SecureStore.getItemAsync("token");
   if (!token) throw new Error("Not authenticated");
 
@@ -93,16 +76,72 @@ export async function registerDeviceTokenWithServer(expoPushToken) {
     throw new Error(raw || `Request failed (${res.status})`);
   }
 
-  let data;
-  try {
-    data = JSON.parse(raw);
-  } catch {
-    throw new Error("Expected JSON but got non-JSON response.");
-  }
+  const data = JSON.parse(raw);
 
   if (!data.success) {
     throw new Error(data?.message || "Failed to register device token");
   }
 
   return true;
+}
+
+// 3️⃣ Preferences (unchanged)
+export async function syncPushSettingsToServer({
+  pushEnabled,
+  safetyEnabled,
+}: {
+  pushEnabled: boolean;
+  safetyEnabled: boolean;
+}) {
+  const token = await SecureStore.getItemAsync("token");
+  if (!token) throw new Error("Not authenticated");
+
+  const res = await fetch(`${API_BASE}/api/notifications/preferences`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ pushEnabled, safetyEnabled }),
+  });
+
+  const raw = await res.text();
+  console.log("PREFS RAW:", raw);
+
+  if (!res.ok) {
+    throw new Error(raw || `Request failed (${res.status})`);
+  }
+
+  const data = JSON.parse(raw);
+
+  if (!data.success) {
+    throw new Error(data?.message || "Failed to save notification preferences");
+  }
+
+  return true;
+}
+
+// 4️⃣ ✅ SINGLE ENTRY POINT (THIS IS WHAT YOU WERE MISSING)
+export async function setupPushNotifications() {
+  // Step A: ensure auth is valid
+  const token = await SecureStore.getItemAsync("token");
+  if (!token) throw new Error("Not authenticated");
+
+  const meRes = await fetch(`${API_BASE}/api/auth/me`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (meRes.status !== 200) {
+    throw new Error("Auth not ready");
+  }
+
+  // Step B: get Expo token
+  const expoPushToken = await getExpoPushToken();
+
+  // Step C: register with backend
+  await registerDeviceTokenWithServer(expoPushToken);
+
+  return expoPushToken;
 }
