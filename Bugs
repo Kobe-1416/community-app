@@ -3,8 +3,8 @@
 3. Enable real-time notifications.
 4. Get the gatecode generator working.
 5. Add verification either phone number or email.
-6. Sort out latency issue when logging in or registering. (logging in works)
-7. Add loading animation to all latency delay functions
+6. Sort out latency issue when logging in or registering. (works now)
+7. Add loading animation to all latency delay functions. (partially works)
 8. Remove all server side notifications
 9. Logout functionality (works now)
 10. Delete account functionality
