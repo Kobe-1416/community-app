@@ -1,1 +1,1 @@
-export const API_URL = "https://olieven-community-app.vercel.app/";cd
+export const API_URL = "https://community-app-ccmd.onrender.com";
