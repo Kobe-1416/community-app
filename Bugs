@@ -1,0 +1,11 @@
+1. Make the home screen have pull refresh.
+2. Make the listing cards clickable and viewable.
+3. Enable real-time notifications.
+4. Get the gatecode generator working.
+5. Add verification either phone number or email.
+6. Sort out latency issue when logging in or registering.
+7. Add loading animation to all latency delay functions
+8. Remove all server side notifications
+9. Logout functionality
+10. Delete account functionality
+11. More section information in settings screen.

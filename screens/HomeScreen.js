@@ -10,7 +10,7 @@ import { useTheme } from "../context/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_URL } from '../config';
 
-const BASE_URL = `${API_URL}`; // <-- change to your PC IP (e.g. http://10.2.2.10) when testing on a real device
+const BASE_URL = `${API_URL}`;
 const DASHBOARD_ENDPOINT = `${BASE_URL}/api/dashboard`;
 const DASHBOARD_CACHE_KEY = "dashboardCache_v1";
 
@@ -57,6 +57,22 @@ export default function HomeScreen({ navigation }) {
       mounted = false;
     };
   }, []);
+
+  // pull refresh handler
+  const fetchData = async () => {
+    setloading(true);
+
+    try{
+      fetchDashboard();
+    }
+    catch(err){
+      console.error("Error refreshing", err);
+      Alert.alert("Error", "Failed to refresh data. Please try again.");
+    }
+    finally{
+      setloading(false);
+    }
+  }
 
   // fetch dashboard from backend
   const fetchDashboard = async () => {
