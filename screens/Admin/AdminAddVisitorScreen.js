@@ -86,18 +86,21 @@ export default function AdminAddVisitorScreen({ navigation }) {
     <View style={{ padding: 16, gap: 12 }}>
       <TextInput
         placeholder="Visitor Name"
+        placeholderTextColor="#888"
         value={name}
         onChangeText={setName}
         style={{ borderWidth: 1, borderColor: "#ccc", padding: 12, borderRadius: 8 }}
       />
       <TextInput
         placeholder="Visitor Surname"
+        placeholderTextColor="#888"
         value={surname}
         onChangeText={setSurname}
         style={{ borderWidth: 1, borderColor: "#ccc", padding: 12, borderRadius: 8 }}
       />
       <TextInput
         placeholder="Phone Number"
+        placeholderTextColor="#888"
         keyboardType="phone-pad"
         value={phone}
         onChangeText={setPhone}
@@ -105,12 +108,14 @@ export default function AdminAddVisitorScreen({ navigation }) {
       />
       <TextInput
         placeholder="Car Plate Number"
+        placeholderTextColor="#888"
         value={plate}
         onChangeText={(text) => setPlate(formatSAPlate(text.replace(/\s+/g, "")))}
         style={{ borderWidth: 1, borderColor: "#ccc", padding: 12, borderRadius: 8 }}
       />
       <TextInput
         placeholder="Host Resident / Unit Number"
+        placeholderTextColor="#888"
         value={hostResident}
         onChangeText={setHostResident}
         style={{ borderWidth: 1, borderColor: "#ccc", padding: 12, borderRadius: 8 }}
