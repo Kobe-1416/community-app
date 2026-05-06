@@ -16,6 +16,7 @@ import LoginScreen from "./screens/LoginScreen";
 import HomeScreen from "./screens/HomeScreen";
 import NoticeBoardScreen from "./screens/NoticeBoardScreen";
 import MarketPlaceScreen from "./screens/MarketPlaceScreen";
+import ListingDetailsScreen from "./screens/ListingDetailsScreen";
 import SettingsScreen from "./screens/SettingsScreen";
 import CreateListingScreen from "./screens/CreateListingScreen";
 import AdminScreen from "./screens/Admin/AdminScreen";
@@ -122,6 +123,16 @@ function AppNavigator() {
             headerTintColor: "#000",
           }}
         />
+        <Stack.Screen
+            name="ListingDetails"
+            component={ListingDetailsScreen}
+            options={{
+              headerShown: true,
+              title: "Listing Details",
+              headerStyle: { backgroundColor: "#85FF27" },
+              headerTintColor: "#000",
+            }}
+          />
       </Stack.Navigator>
     </NavigationContainer>
   );

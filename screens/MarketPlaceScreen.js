@@ -29,89 +29,90 @@ export default function MarketPlaceScreen({ navigation }) {
   };
 
   const fetchListings = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/api/market/items`);
-      const data = await res.json();
+  setLoading(true);
+  try {
+    const res = await fetch(`${API_URL}/api/market/items`);
+    const data = await res.json();
 
-      const mapped = data.items.map((item) => {
-          const createdDate = new Date(item.created_at);
-          const now = new Date();
-          const diffDays = Math.floor((now - createdDate) / (1000 * 60 * 60 * 24));
+    const mapped = data.items.map((item) => {
+      const createdDate = new Date(item.created_at);
+      const now = new Date();
+      const diffDays = Math.floor((now - createdDate) / (1000 * 60 * 60 * 24));
 
-          console.log('item.images:', item.images);
+      return {
+        id: item.id.toString(),
+        title: item.prod_name,
+        description: item.prod_desc,
+        price: item.price,
+        phone: item.cell_no,
+        date: item.created_at,
+        isNew: diffDays <= 2,
+        images: Array.isArray(item.images) ? item.images : [],
+        thumbnail:
+          item.images?.[0] ||
+          "https://via.placeholder.com/300x200/CCCCCC/000000?text=Item",
+      };
+    });
 
-          return {
-            id: item.id.toString(),
-            title: item.prod_name,
-            description: item.prod_desc,
-            price: item.price,
-            phone: item.cell_no,
-            date: item.created_at,
-            isNew: diffDays <= 2,
-            thumbnail: item.images?.[0] || "https://via.placeholder.com/300x200/CCCCCC/000000?text=Item",
-          };
-        });
-
-      setListings(mapped);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    setListings(mapped);
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchListings();
   }, []);
 
   const ListingCard = ({ item }) => (
-    <Pressable
-      style={[styles.card, isDarkMode && styles.cardDark]}
-      onPress={() => {}}
-    >
-      {item.isNew && (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>NEW</Text>
-        </View>
-      )}
-
-      <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} resizeMode="cover" />
-
-      <View style={styles.cardContent}>
-        <View style={styles.titleRow}>
-          <Text style={[styles.title, isDarkMode && styles.textDark]} numberOfLines={1}>
-            {item.title}
-          </Text>
-          <Text style={styles.price}>R{item.price.toLocaleString()}</Text>
-        </View>
-
-        <Text
-          style={[styles.description, isDarkMode && styles.mutedTextDark]}
-          numberOfLines={2}
-        >
-          {item.description}
-        </Text>
-
-        <View style={styles.footer}>
-          <View style={styles.contactRow}>
-            <Ionicons
-              name="call-outline"
-              size={16}
-              color={isDarkMode ? "#bbb" : "#666"}
-            />
-            <Text style={[styles.phone, isDarkMode && styles.mutedTextDark]}>
-              {item.phone}
-            </Text>
-          </View>
-
-          <Text style={[styles.date, isDarkMode && styles.mutedTextDark]}>
-            {formatDate(item.date)}
-          </Text>
-        </View>
+  <Pressable
+    style={[styles.card, isDarkMode && styles.cardDark]}
+    onPress={() => navigation.navigate("ListingDetails", { listing: item })}
+  >
+    {item.isNew && (
+      <View style={styles.badge}>
+        <Text style={styles.badgeText}>NEW</Text>
       </View>
-    </Pressable>
-  );
+    )}
+
+    <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} resizeMode="cover" />
+
+    <View style={styles.cardContent}>
+      <View style={styles.titleRow}>
+        <Text style={[styles.title, isDarkMode && styles.textDark]} numberOfLines={1}>
+          {item.title}
+        </Text>
+        <Text style={styles.price}>R{Number(item.price).toLocaleString()}</Text>
+      </View>
+
+      <Text
+        style={[styles.description, isDarkMode && styles.mutedTextDark]}
+        numberOfLines={2}
+      >
+        {item.description}
+      </Text>
+
+      <View style={styles.footer}>
+        <View style={styles.contactRow}>
+          <Ionicons
+            name="call-outline"
+            size={16}
+            color={isDarkMode ? "#bbb" : "#666"}
+          />
+          <Text style={[styles.phone, isDarkMode && styles.mutedTextDark]}>
+            {item.phone}
+          </Text>
+        </View>
+
+        <Text style={[styles.date, isDarkMode && styles.mutedTextDark]}>
+          {formatDate(item.date)}
+        </Text>
+      </View>
+    </View>
+  </Pressable>
+);
 
   return (
     <View style={[styles.container, isDarkMode && styles.containerDark]}>
