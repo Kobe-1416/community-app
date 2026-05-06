@@ -16,6 +16,7 @@ import * as SecureStore from "expo-secure-store";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { API_URL } from "../config";
+import { setupPushNotifications } from "../notifications/push";
 
 export default function LoginScreen({ navigation }) {
   const { isDarkMode } = useTheme();
@@ -88,6 +89,12 @@ export default function LoginScreen({ navigation }) {
       setIsAdmin(meData?.user?.role === "admin");
 
       navigation.replace("MainTabs");
+
+      setTimeout(() => {
+        setupPushNotifications().catch(err =>
+          console.log("Push setup error:", err)
+        );
+      }, 1000);
     } catch (error) {
       Alert.alert("Network error", "Could not connect to server");
     } finally {

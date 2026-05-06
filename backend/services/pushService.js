@@ -2,12 +2,21 @@ const { Expo } = require("expo-server-sdk");
 const expo = new Expo();
 
 async function sendExpoPush(tokens, message) {
-  // tokens: array of expo tokens
-  const chunks = expo.chunkPushNotifications(
-    tokens
-      .filter(Expo.isExpoPushToken)
-      .map((to) => ({ to, ...message }))
-  );
+  // ✅ validate + filter once
+  const validTokens = tokens.filter(token => {
+    if (!Expo.isExpoPushToken(token)) {
+      console.warn("Invalid Expo token:", token);
+      return false;
+    }
+    return true;
+  });
+
+  const messages = validTokens.map((to) => ({
+    to,
+    ...message,
+  }));
+
+  const chunks = expo.chunkPushNotifications(messages);
 
   for (const chunk of chunks) {
     try {

@@ -4,54 +4,62 @@ import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
 import { API_URL } from "../config";
 
-const API_BASE = `${API_URL}`;
+  const API_BASE = `${API_URL}`;
 
-// Foreground behavior
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: false,
-    shouldSetBadge: true,
-  }),
-});
+  // Foreground behavior
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: false,
+      shouldSetBadge: true,
+    }),
+  });
 
 // 1️⃣ Get Expo Push Token
 export async function getExpoPushToken() {
-  if (!Device.isDevice) {
-    throw new Error("Push notifications require a physical device.");
+    if (!Device.isDevice) {
+      throw new Error("Push notifications require a physical device.");
+    }
+
+    // ✅ ADD IT HERE (very early)
+    await Notifications.setNotificationChannelAsync("default", {
+      name: "default",
+      importance: Notifications.AndroidImportance.MAX,
+    });
+
+    const { status: existingStatus } =
+      await Notifications.getPermissionsAsync();
+
+    let finalStatus = existingStatus;
+
+    if (existingStatus !== "granted") {
+      const { status } =
+        await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+
+    if (finalStatus !== "granted") {
+      throw new Error("Notification permission not granted.");
+    }
+
+    const projectId =
+      Constants.expoConfig?.extra?.eas?.projectId ??
+      Constants.easConfig?.projectId; // ✅ fix added
+
+    if (!projectId) {
+      throw new Error("Missing projectId in app config.");
+    }
+
+    const token = (
+      await Notifications.getExpoPushTokenAsync({
+        projectId,
+      })
+    ).data;
+
+    console.log("TOKEN:", token);
+
+    return token;
   }
-
-  const { status: existingStatus } =
-    await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
-
-  if (existingStatus !== "granted") {
-    const { status } =
-      await Notifications.requestPermissionsAsync();
-    finalStatus = status;
-  }
-
-  if (finalStatus !== "granted") {
-    throw new Error("Notification permission not granted.");
-  }
-
-  const projectId =
-    Constants.expoConfig?.extra?.eas?.projectId;
-
-  if (!projectId) {
-    throw new Error("Missing projectId in app config.");
-  }
-
-  const token = (
-    await Notifications.getExpoPushTokenAsync({
-      projectId,
-    })
-  ).data;
-
-  console.log("TOKEN:", token);
-
-  return token;
-}
 
 // 2️⃣ Register token with backend
 export async function registerDeviceTokenWithServer(expoPushToken) {
