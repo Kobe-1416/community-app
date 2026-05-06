@@ -21,14 +21,22 @@
         "backgroundColor": "#85FF27"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.MyApp"
+      "package": "com.anonymous.MyApp",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/adaptive-icon.png",
+          "color": "#ffffff"
+        }
+      ]
     ],
     "extra": {
       "eas": {
