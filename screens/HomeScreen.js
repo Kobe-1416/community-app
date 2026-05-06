@@ -20,6 +20,7 @@ export default function HomeScreen({ navigation }) {
   const [dashboard, setDashboard] = useState({
     gateCode: null,
     weekEnd: null,
+    role: "user",
     contributions: { current: 0, total: 1 },
     visitorsTotal: 0,
     visitorsInside: 0,
@@ -144,13 +145,14 @@ export default function HomeScreen({ navigation }) {
         return;
       }
 
-      const resp = await fetch(`${BASE_URL}/api/gatecodes/generate`, {
+      const resp = await fetch(`${BASE_URL}/api/gate-codes/generate`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
+      console.log("Generate codes response:", resp);
 
       if (!resp.ok) {
         throw new Error("Failed to generate codes");
@@ -199,28 +201,34 @@ export default function HomeScreen({ navigation }) {
         smallText={gateCode ? `expires: ${formattedWeekEnd}` : "no code available"}
       />
 
-      <Pressable
-          style={{
-            marginTop: 10,
-            backgroundColor: "#333",
-            padding: 12,
-            borderRadius: 8,
-          }}
-          onPress={() =>
-            Alert.alert(
-              "Generate Codes",
-              "This will replace all current gate codes. Continue?",
-              [
-                { text: "Cancel", style: "cancel" },
-                { text: "Yes", onPress: generateGateCodes },
-              ]
-            )
-          }
-        >
-          <Text style={{ color: "#fff", textAlign: "center" }}>
-            Generate New Gate Codes
-          </Text>
-        </Pressable>
+      {dashboard.role === "admin" && (
+          <Pressable
+            style={{
+              marginTop: 10,
+              marginBottom: 10,
+              backgroundColor: "#85FF27",
+              padding: 12,
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: "#c7c7c7",
+              width: "70%"
+            }}
+            onPress={() =>
+              Alert.alert(
+                "Generate Codes",
+                "This will replace all current gate codes. Continue?",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  { text: "Yes", onPress: generateGateCodes },
+                ]
+              )
+            }
+          >
+            <Text style={{ color: "#333", textAlign: "center", fontWeight: "600" }}>
+              Generate New Gate Codes
+            </Text>
+          </Pressable>
+        )}
 
       <Text style={styles.subtitle}>
         Give the guard the code to exit and enter the community.

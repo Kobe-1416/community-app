@@ -5,25 +5,31 @@ const authenticateToken = require("./middleware/auth");
 
 router.get("/dashboard", authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.dbUserId; // from JWT payload
+    const userId = req.user.dbUserId;
+
     console.log("dashboard auth payload:", req.user);
 
-
-    /* 1️⃣ Gate code (current week) */
+    /* 1️⃣ Gate code (current active week) */
     const gateCodeResult = await pool.query(
       `
-      SELECT g.code, g.week_end
-   FROM com_users cu
-   JOIN gate_codes g ON cu.current_code_id = g.id
-   WHERE cu.id = $1
-   LIMIT 1
-      `,
-      [userId]
+      SELECT code, week_end
+      FROM gate_codes
+      WHERE CURRENT_DATE BETWEEN week_start AND week_end
+      LIMIT 1
+      `
     );
 
     const gateCode = gateCodeResult.rows[0]?.code || null;
     const weekEnd = gateCodeResult.rows[0]?.week_end || null;
+
     console.log("Gate code fetched:", gateCode, "Week end:", weekEnd);
+
+    const userResult = await pool.query(
+      `SELECT role FROM com_users WHERE id = $1`,
+      [userId]
+    );
+
+    const role = userResult.rows[0]?.role || "User";
 
     /* 2️⃣ Contributions */
     const contributionsResult = await pool.query(
@@ -70,7 +76,7 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
     /* 5️⃣ Marketplace updates since last check */
     const marketplaceCountResult = await pool.query(
       `
-      SELECT COUNT(*) 
+      SELECT COUNT(*) AS count
       FROM listings
       WHERE created_at > (
         SELECT last_checked_marketplace
@@ -84,7 +90,7 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
     /* 6️⃣ Announcements updates since last check */
     const announcementsCountResult = await pool.query(
       `
-      SELECT COUNT(*)
+      SELECT COUNT(*) AS count
       FROM announcements
       WHERE created_at > (
         SELECT last_checked_announcements
@@ -95,8 +101,10 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
       [userId]
     );
 
+    /* ✅ RESPONSE */
     res.json({
       gateCode,
+      role,
       weekEnd,
       contributions: {
         current: Number(contributionsResult.rows[0].current),
@@ -112,6 +120,7 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
         announcements: Number(announcementsCountResult.rows[0].count),
       },
     });
+
   } catch (err) {
     console.error("Dashboard error:", err);
     res.status(500).json({ message: "Failed to load dashboard" });
