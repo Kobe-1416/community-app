@@ -12,11 +12,13 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
     /* 1️⃣ Gate code (current active week) */
     const gateCodeResult = await pool.query(
       `
-      SELECT code, week_end
-      FROM gate_codes
-      WHERE CURRENT_DATE BETWEEN week_start AND week_end
+      SELECT g.code, g.week_end
+      FROM com_users cu
+      JOIN gate_codes g ON cu.current_code_id = g.id
+      WHERE cu.id = $1
       LIMIT 1
-      `
+      `,
+      [userId]
     );
 
     const gateCode = gateCodeResult.rows[0]?.code || null;

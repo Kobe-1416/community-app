@@ -17,8 +17,6 @@ router.post("/generate", authenticateToken, async (req, res) => {
     return res.status(403).json({ message: "Forbidden" });
   }
 
-  console.log(req.user);
-
   const client = await pool.connect();
 
   try {
