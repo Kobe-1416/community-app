@@ -108,9 +108,12 @@ export default function HomeScreen({ navigation }) {
 
       const data = await resp.json();
 
+      
+
       const mapped = {
         gateCode: data.gateCode || null,
         weekEnd: data.weekEnd || null,
+        role: data.role || "user", // ✅ ADD THIS
         contributions: {
           current: data.contributions?.current ?? 0,
           total: data.contributions?.total ?? 1,

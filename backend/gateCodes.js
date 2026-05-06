@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const pool = require("./db");
+const authenticateToken = require("./middleware/auth");
 
 function generateCode() {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -11,10 +12,12 @@ function generateCode() {
   return code;
 }
 
-router.post("/generate", async (req, res) => {
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ message: "Forbidden" });
-    }
+router.post("/generate", authenticateToken, async (req, res) => {
+  if (req.user.role?.toLowerCase() !== "admin") {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+
+  console.log(req.user);
 
   const client = await pool.connect();
 

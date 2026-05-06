@@ -29,7 +29,7 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
       [userId]
     );
 
-    const role = userResult.rows[0]?.role || "User";
+    const role = userResult.rows[0]?.role || "user";
 
     /* 2️⃣ Contributions */
     const contributionsResult = await pool.query(
