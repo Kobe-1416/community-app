@@ -1,7 +1,7 @@
 1. Make the home screen have pull refresh. (works now)
 2. Make the listing cards clickable and viewable.  (works now)
 3. Enable real-time notifications.
-4. Get the gatecode generator working.
+4. Get the gatecode generator working. (works now)
 5. Add verification either phone number or email.
 6. Sort out latency issue when logging in or registering. (works now)
 7. Add loading animation to all latency delay functions. (partially works)
