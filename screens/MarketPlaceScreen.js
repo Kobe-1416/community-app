@@ -143,6 +143,7 @@ export default function MarketPlaceScreen({ navigation }) {
       />
 
       <Pressable
+        pointerEvents="box-none"
         style={[styles.addButton, isDarkMode && styles.addButtonDark]}
         onPress={() =>
           navigation.navigate("CreateListing", {
