@@ -135,6 +135,38 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
+  const generateGateCodes = async () => {
+    try {
+      const token = await SecureStore.getItemAsync("token");
+
+      if (!token) {
+        Alert.alert("Error", "Not authenticated");
+        return;
+      }
+
+      const resp = await fetch(`${BASE_URL}/api/gatecodes/generate`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!resp.ok) {
+        throw new Error("Failed to generate codes");
+      }
+
+      Alert.alert("Success", "New gate codes generated");
+
+      // refresh dashboard so new code shows
+      await fetchDashboard();
+
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "Could not generate codes");
+    }
+  };
+
   // destructure dashboard for easy use in JSX
   const {
     gateCode,
@@ -166,6 +198,29 @@ export default function HomeScreen({ navigation }) {
         largeText={gateCode ? gateCode : "—"}
         smallText={gateCode ? `expires: ${formattedWeekEnd}` : "no code available"}
       />
+
+      <Pressable
+          style={{
+            marginTop: 10,
+            backgroundColor: "#333",
+            padding: 12,
+            borderRadius: 8,
+          }}
+          onPress={() =>
+            Alert.alert(
+              "Generate Codes",
+              "This will replace all current gate codes. Continue?",
+              [
+                { text: "Cancel", style: "cancel" },
+                { text: "Yes", onPress: generateGateCodes },
+              ]
+            )
+          }
+        >
+          <Text style={{ color: "#fff", textAlign: "center" }}>
+            Generate New Gate Codes
+          </Text>
+        </Pressable>
 
       <Text style={styles.subtitle}>
         Give the guard the code to exit and enter the community.
