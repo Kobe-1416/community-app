@@ -4,7 +4,7 @@ import CodeCard from "../components/CodeCard";
 import ContributionsBar from "../components/ContributionBar";
 import Card from "../components/Card";
 import PressableCard from "../components/PressableCard";
-import { ScrollView, View, Text, StyleSheet, Pressable, Alert } from "react-native";
+import { ScrollView, RefreshControl, View, Text, StyleSheet, Pressable, Alert } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { useTheme } from "../context/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -60,29 +60,28 @@ export default function HomeScreen({ navigation }) {
 
   // pull refresh handler
   const fetchData = async () => {
-    setloading(true);
+    setLoading(true);
 
     try{
-      fetchDashboard();
+      await fetchDashboard();
     }
     catch(err){
       console.error("Error refreshing", err);
       Alert.alert("Error", "Failed to refresh data. Please try again.");
     }
     finally{
-      setloading(false);
+      setLoading(false);
     }
   }
 
   // fetch dashboard from backend
   const fetchDashboard = async () => {
-    setLoading(true);
     try {
       const token = await SecureStore.getItemAsync("token");
       if (!token) {
         // Not authenticated
         Alert.alert("Not authenticated", "Please login again.");
-        setLoading(false);
+
         return;
       }
 
@@ -103,7 +102,6 @@ export default function HomeScreen({ navigation }) {
         } else {
           console.warn("Failed to fetch dashboard", resp.status);
         }
-        setLoading(false);
         return;
       }
 
@@ -134,8 +132,6 @@ export default function HomeScreen({ navigation }) {
     } catch (err) {
       console.error("Network error fetching dashboard", err);
       // keep cached data if any
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -162,6 +158,9 @@ export default function HomeScreen({ navigation }) {
         isDarkMode && styles.darkScrollContainer,
       ]}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={loading} onRefresh={fetchData} />
+      }
     >
       <CodeCard
         largeText={gateCode ? gateCode : "—"}
