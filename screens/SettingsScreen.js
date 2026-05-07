@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from "expo-secure-store";
 import { useTheme } from "../context/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { registerForPushAsync, registerDeviceTokenWithServer, syncPushSettingsToServer } from "../notifications/push";
+import { getExpoPushToken, registerDeviceTokenWithServer, syncPushSettingsToServer } from "../notifications/push";
 import { API_URL } from '../config';
 
 export default function SettingsScreen({ navigation }) {
@@ -26,7 +26,6 @@ export default function SettingsScreen({ navigation }) {
   const [safetyEnabled, setSafetyEnabled] = useState(false);
   const [token, setToken] = useState(null);
 
-  // Form states
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -38,7 +37,6 @@ export default function SettingsScreen({ navigation }) {
     const loadToken = async () => {
       const storedToken = await SecureStore.getItemAsync('token');
       setToken(storedToken);
-      console.log("Loaded token:", storedToken);
     };
     loadToken();
   }, []);
@@ -52,14 +50,18 @@ export default function SettingsScreen({ navigation }) {
     })();
   }, []);
 
+  const registerPush = async () => {
+    const expoToken = await getExpoPushToken();
+    await registerDeviceTokenWithServer(expoToken);
+  };
+
   const onTogglePush = async (value) => {
     try {
       setPushEnabled(value);
       await AsyncStorage.setItem(PUSH_KEY, String(value));
 
       if (value) {
-        const expoToken = await registerForPushAsync();
-        await registerDeviceTokenWithServer(expoToken);
+        await registerPush();
       }
 
       await syncPushSettingsToServer({ pushEnabled: value, safetyEnabled });
@@ -76,8 +78,7 @@ export default function SettingsScreen({ navigation }) {
       await AsyncStorage.setItem(SAFETY_KEY, String(value));
 
       if (value && !pushEnabled) {
-        const expoToken = await registerForPushAsync();
-        await registerDeviceTokenWithServer(expoToken);
+        await registerPush();
         setPushEnabled(true);
         await AsyncStorage.setItem(PUSH_KEY, "true");
         await syncPushSettingsToServer({ pushEnabled: true, safetyEnabled: true });
@@ -368,63 +369,19 @@ export default function SettingsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: 
-    '#f8f8f8', 
-    paddingHorizontal: 20, 
-    paddingTop: 20 },
-  darkContainer: { 
-    backgroundColor: 
-    '#121212' },
-  header: { 
-    fontSize: 32, 
-    fontWeight: 'bold', 
-    color: '#000', 
-    marginBottom: 30 },
+  container: { flex: 1, backgroundColor: '#f8f8f8', paddingHorizontal: 20, paddingTop: 20 },
+  darkContainer: { backgroundColor: '#121212' },
+  header: { fontSize: 32, fontWeight: 'bold', color: '#000', marginBottom: 30 },
   darkText: { color: '#fff' },
-  section: { 
-    backgroundColor: '#fff', 
-    borderRadius: 12, padding: 20, 
-    marginBottom: 20, shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 2 }, 
-    shadowOpacity: 0.1, 
-    shadowRadius: 4, 
-    elevation: 3 },
-  darkSection: { 
-    backgroundColor: '#1e1e1e' },
-  sectionTitle: { fontSize: 18, 
-    fontWeight: '600', 
-    color: '#000', 
-    marginBottom: 20 },
-  settingItem: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    paddingVertical: 15, 
-    borderBottomWidth: 1, 
-    borderBottomColor: '#f0f0f0' },
-  settingLeft: { 
-    flexDirection: 'row', 
-    alignItems: 'center' },
-  iconContainer: { 
-    width: 40, 
-    alignItems: 'center' },
-  settingTitle: { 
-    fontSize: 16,
-     marginLeft: 10 },
-  formContainer: { 
-    marginTop: 10, 
-    paddingTop: 15, 
-    borderTopWidth: 1, 
-    borderTopColor: '#f0f0f0' },
-  input: { 
-    backgroundColor: '#f5f5f5', 
-    borderRadius: 10, 
-    padding: 15, 
-    fontSize: 16, 
-    color: '#333', 
-    marginBottom: 15 },
+  section: { backgroundColor: '#fff', borderRadius: 12, padding: 20, marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+  darkSection: { backgroundColor: '#1e1e1e' },
+  sectionTitle: { fontSize: 18, fontWeight: '600', color: '#000', marginBottom: 20 },
+  settingItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  settingLeft: { flexDirection: 'row', alignItems: 'center' },
+  iconContainer: { width: 40, alignItems: 'center' },
+  settingTitle: { fontSize: 16, marginLeft: 10 },
+  formContainer: { marginTop: 10, paddingTop: 15, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
+  input: { backgroundColor: '#f5f5f5', borderRadius: 10, padding: 15, fontSize: 16, color: '#333', marginBottom: 15 },
   darkInput: { backgroundColor: '#2a2a2a', color: '#fff' },
   buttonRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
   cancelButton: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, borderWidth: 1, borderColor: '#ccc' },
