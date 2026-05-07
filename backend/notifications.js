@@ -7,7 +7,7 @@ const authMiddleware = require("./middleware/auth");
 // POST /api/notifications/register
 router.post("/register", authMiddleware, async (req, res) => {
   try {
-    const userId = req.user.dbUserId; // IMPORTANT
+    const userId = req.user.dbUserId;
     const { expoPushToken } = req.body;
 
     if (!expoPushToken || typeof expoPushToken !== "string") {
@@ -19,7 +19,10 @@ router.post("/register", authMiddleware, async (req, res) => {
       INSERT INTO user_notification_settings (user_id, expo_push_token, push_enabled, safety_enabled, updated_at)
       VALUES ($1, $2, true, false, NOW())
       ON CONFLICT (user_id)
-      DO UPDATE SET expo_push_token = EXCLUDED.expo_push_token, updated_at = NOW()
+      DO UPDATE SET 
+        expo_push_token = EXCLUDED.expo_push_token,
+        push_enabled = true,
+        updated_at = NOW()
       `,
       [userId, expoPushToken]
     );
@@ -34,15 +37,18 @@ router.post("/register", authMiddleware, async (req, res) => {
 // POST /api/notifications/preferences
 router.post("/preferences", authMiddleware, async (req, res) => {
   try {
-    const userId = req.user.dbUserId; // IMPORTANT
+    const userId = req.user.dbUserId;
     const { pushEnabled, safetyEnabled } = req.body;
 
     await pool.query(
       `
-      INSERT INTO user_notification_settings (user_id, push_enabled, safety_enabled, updated_at)
-      VALUES ($1, $2, $3, NOW())
+      INSERT INTO user_notification_settings (user_id, push_enabled, safety_enabled, expo_push_token, updated_at)
+      VALUES ($1, $2, $3, NULL, NOW())
       ON CONFLICT (user_id)
-      DO UPDATE SET push_enabled = $2, safety_enabled = $3, updated_at = NOW()
+      DO UPDATE SET 
+        push_enabled = $2, 
+        safety_enabled = $3, 
+        updated_at = NOW()
       `,
       [userId, !!pushEnabled, !!safetyEnabled]
     );
