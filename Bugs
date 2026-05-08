@@ -1,6 +1,6 @@
 1. Make the home screen have pull refresh. (works now)
 2. Make the listing cards clickable and viewable.  (works now)
-3. Enable real-time notifications.
+3. Enable real-time notifications. (works now)
 4. Get the gatecode generator working. (works now)
 5. Add verification either phone number or email.
 6. Sort out latency issue when logging in or registering. (works now)
@@ -10,3 +10,4 @@
 10. Delete account functionality
 11. "More" section information in settings screen.
 12. Call direct from listing details  (works now)
+13. Tweak all colour mismatch in the preview build app
