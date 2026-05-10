@@ -21,30 +21,90 @@ router.post("/register", async (req, res) => {
   try {
     const { surname, house_number, street_name, phone, password } = req.body;
 
-    // 1️⃣ Hash the password
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    // 1. Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 2️⃣ Insert into DB
+    // 2. Find an unassigned active gate code
+    const gateCodeResult = await pool.query(`
+      SELECT gc.id
+      FROM gate_codes gc
+      WHERE CURRENT_DATE BETWEEN gc.week_start AND gc.week_end
+      AND gc.id NOT IN (
+        SELECT current_code_id
+        FROM com_users
+        WHERE current_code_id IS NOT NULL
+      )
+      LIMIT 1
+    `);
+
+    let currentCodeId;
+
+    if (gateCodeResult.rows.length > 0) {
+      // Found unused code
+      currentCodeId = gateCodeResult.rows[0].id;
+    } else {
+      // All codes assigned → reuse one
+      const fallbackCode = await pool.query(`
+        SELECT id
+        FROM gate_codes
+        WHERE CURRENT_DATE BETWEEN week_start AND week_end
+        LIMIT 1
+      `);
+
+      if (fallbackCode.rows.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "No active gate codes available",
+        });
+      }
+
+      currentCodeId = fallbackCode.rows[0].id;
+    }
+
+    // 3. Insert user
     const result = await pool.query(
-      `INSERT INTO com_users (surname, house_number, street_name, phone, password_hash)
-       VALUES ($1, $2, $3, $4, $5) RETURNING id, surname, phone`,
-      [surname, house_number, street_name, phone, hashedPassword]
+      `
+      INSERT INTO com_users (
+        surname,
+        house_number,
+        street_name,
+        phone,
+        password_hash,
+        current_code_id
+      )
+      VALUES ($1,$2,$3,$4,$5,$6)
+      RETURNING id, surname, phone, current_code_id
+      `,
+      [
+        surname,
+        house_number,
+        street_name,
+        phone,
+        hashedPassword,
+        currentCodeId,
+      ]
     );
 
-    // 3️⃣ Respond with success
     res.status(201).json({
       success: true,
       message: "User registered successfully",
       user: result.rows[0],
     });
+
   } catch (err) {
     console.error(err);
-    // 4️⃣ Handle duplicate phone
+
     if (err.code === "23505") {
-      return res.status(400).json({ success: false, message: "User with similar details exists" });
+      return res.status(400).json({
+        success: false,
+        message: "User with similar details exists",
+      });
     }
-    res.status(500).json({ success: false, message: "Server error" });
+
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 });
 
