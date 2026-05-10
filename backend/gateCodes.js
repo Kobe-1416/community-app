@@ -43,7 +43,7 @@ router.post("/generate", authenticateToken, async (req, res) => {
     const codes = [];
     const used = new Set();
 
-    while (codes.length < 35) {
+    while (codes.length < 90) {
       const code = generateCode();
       if (!used.has(code)) {
         used.add(code);
