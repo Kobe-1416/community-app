@@ -114,6 +114,22 @@ router.post("/generate", authenticateToken, async (req, res) => {
   }
 });
 
+router.delete("/del", authenticateToken, async (req, res) => {
+  if (req.user.role?.toLowerCase() !== "admin") {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+
+  try{
+    await pool.query("DELETE FROM gate_codes");
+    await pool.query("UPDATE com_users SET current_code_id = NULL");
+    res.json({ success: true, message: "All codes deleted and unassigned" });
+  }
+  catch(err){
+    console.error(err);
+    res.status(500).json({ success: false, message: "Failed to delete codes" });
+  }
+});
+
 // Debug
 router.get("/", async (req, res) => {
   const result = await pool.query("SELECT * FROM gate_codes ORDER BY id");
