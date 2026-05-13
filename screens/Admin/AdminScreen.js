@@ -1,11 +1,60 @@
-import React from "react";
-import { ScrollView, View, Text, StyleSheet } from "react-native";
+import React, { useState } from "react";
+import {
+  ScrollView,
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
+import * as SecureStore from "expo-secure-store";
+
 import PressableCard from "../../components/PressableCard";
 import { useTheme } from "../../context/ThemeContext";
-import { API_URL } from '../../config';
+import { API_URL } from "../../config";
 
 export default function AdminScreen({ navigation }) {
   const { isDarkMode } = useTheme();
+  const [resettingGateCodes, setResettingGateCodes] = useState(false);
+
+  const handleResetGateCodes = async () => {
+    if (resettingGateCodes) return;
+
+    try {
+      setResettingGateCodes(true);
+
+      const token = await SecureStore.getItemAsync("token");
+
+      if (!token) {
+        Alert.alert("Unauthorized", "No login token found. Please log in again.");
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/api/gate-codes/del`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        Alert.alert(
+          "Reset failed",
+          data.message || "Failed to reset gate codes."
+        );
+        return;
+      }
+
+      Alert.alert("Success", "Gate codes reset successfully.");
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", "Something went wrong while resetting gate codes.");
+    } finally {
+      setResettingGateCodes(false);
+    }
+  };
 
   return (
     <ScrollView
@@ -16,6 +65,7 @@ export default function AdminScreen({ navigation }) {
       showsVerticalScrollIndicator={false}
     >
       <Text style={[styles.title, isDarkMode && styles.darkText]}>Admin</Text>
+
       <Text style={[styles.subtitle, isDarkMode && styles.darkSubtitle]}>
         Manage visitors, announcements, and marketplace moderation.
       </Text>
@@ -30,11 +80,13 @@ export default function AdminScreen({ navigation }) {
           notificationCount={0}
           onPress={() => navigation.navigate("Admin Visitors")}
         />
+
         <PressableCard
           title="Announcements"
           notificationCount={0}
           onPress={() => navigation.navigate("Admin Announcements")}
         />
+
         <PressableCard
           title="Marketplace"
           notificationCount={0}
@@ -52,6 +104,7 @@ export default function AdminScreen({ navigation }) {
           notificationCount={0}
           onPress={() => navigation.navigate("Admin Add Visitor")}
         />
+
         <PressableCard
           title="Post Announcement"
           notificationCount={0}
@@ -62,33 +115,28 @@ export default function AdminScreen({ navigation }) {
       <Text style={[styles.sectionTitle, isDarkMode && styles.darkText]}>
         Reset gate codes
       </Text>
+
       <Text style={[styles.subtitle, isDarkMode && styles.darkSubtitle]}>
         Delete all existing gate codes and unassign them from users.
       </Text>
 
+      <View style={styles.cards}>
         <PressableCard
-          title="Reset Gate Codes"
+          title={resettingGateCodes ? "Resetting..." : "Reset Gate Codes"}
           notificationCount={0}
-          onPress={() => fetch(`${API_URL}/api/gate-codes/del`, {
-            method: "DELETE",
-            headers: {  "Authorization": `Bearer ${global.authToken}` },
-          }).then(res => res.json()).then(data => {
-            if(data.success){ 
-              alert("Gate codes reset successfully");
-            } 
-            else {
-              alert("Failed to reset gate codes: " + data.message);
-            }
-          }).catch(err => {
-            console.error(err);
-            alert("Error resetting gate codes");
-          }
-        )
-        }
-        
-              />
-    
-        </ScrollView>
+          onPress={handleResetGateCodes}
+        />
+      </View>
+
+      {resettingGateCodes && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" />
+          <Text style={[styles.loadingText, isDarkMode && styles.darkSubtitle]}>
+            Resetting gate codes...
+          </Text>
+        </View>
+      )}
+    </ScrollView>
   );
 }
 
@@ -133,5 +181,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
+  },
+  loadingContainer: {
+    marginTop: 10,
+    alignItems: "center",
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: 13,
+    color: "#444",
   },
 });

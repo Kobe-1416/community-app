@@ -22,8 +22,16 @@ router.post("/generate", authenticateToken, async (req, res) => {
   try {
     await client.query("BEGIN");
 
-    // 1️⃣ Clear old codes
-    await client.query("DELETE FROM gate_codes");
+    // 1️⃣ Unassign old codes first
+    await client.query(`
+      UPDATE com_users
+      SET current_code_id = NULL
+    `);
+
+    // 2️⃣ Clear old codes
+    await client.query(`
+      DELETE FROM gate_codes
+    `);
 
     // 2️⃣ Calculate week
     const today = new Date();
@@ -116,17 +124,44 @@ router.post("/generate", authenticateToken, async (req, res) => {
 
 router.delete("/del", authenticateToken, async (req, res) => {
   if (req.user.role?.toLowerCase() !== "admin") {
-    return res.status(403).json({ message: "Forbidden" });
+    return res.status(403).json({
+      success: false,
+      message: "Forbidden",
+    });
   }
 
-  try{
-    await pool.query("DELETE FROM gate_codes");
-    await pool.query("UPDATE com_users SET current_code_id = NULL");
-    res.json({ success: true, message: "All codes deleted and unassigned" });
-  }
-  catch(err){
-    console.error(err);
-    res.status(500).json({ success: false, message: "Failed to delete codes" });
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // 1. Unassign codes from users first
+    await client.query(`
+      UPDATE com_users
+      SET current_code_id = NULL
+    `);
+
+    // 2. Now delete the gate codes
+    await client.query(`
+      DELETE FROM gate_codes
+    `);
+
+    await client.query("COMMIT");
+
+    res.json({
+      success: true,
+      message: "All codes deleted and unassigned",
+    });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Delete gate codes error:", err);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete codes",
+    });
+  } finally {
+    client.release();
   }
 });
 
