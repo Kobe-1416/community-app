@@ -58,7 +58,37 @@ export default function AdminScreen({ navigation }) {
           onPress={() => navigation.navigate("Admin Create Announcement")}
         />
       </View>
-    </ScrollView>
+
+      <Text style={[styles.sectionTitle, isDarkMode && styles.darkText]}>
+        Reset gate codes
+      </Text>
+      <Text style={[styles.subtitle, isDarkMode && styles.darkSubtitle]}>
+        Delete all existing gate codes and unassign them from users.
+      </Text>
+
+        <PressableCard
+          title="Reset Gate Codes"
+          notificationCount={0}
+          onPress={() => fetch(`${API_URL}/api/gate-codes/del`, {
+            method: "DELETE",
+            headers: {  "Authorization": `Bearer ${global.authToken}` },
+          }).then(res => res.json()).then(data => {
+            if(data.success){ 
+              alert("Gate codes reset successfully");
+            } 
+            else {
+              alert("Failed to reset gate codes: " + data.message);
+            }
+          }).catch(err => {
+            console.error(err);
+            alert("Error resetting gate codes");
+          }
+        )
+        }
+        
+              />
+    
+        </ScrollView>
   );
 }
 
