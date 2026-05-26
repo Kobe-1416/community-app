@@ -25,9 +25,16 @@ router.post("/generate", authenticateToken, async (req, res) => {
 });
 
 router.post("/generate-auto", async (req, res) => {
+  const cronId = `cron-${Date.now()}`;
+  const startedAt = Date.now();
+
+  console.log(`[${cronId}] Cron request received`);
+
   const cronSecret = req.headers["x-cron-secret"];
 
   if (!process.env.CRON_SECRET) {
+    console.error(`[${cronId}] CRON_SECRET missing`);
+
     return res.status(500).json({
       success: false,
       message: "CRON_SECRET is not configured on the server",
@@ -35,6 +42,8 @@ router.post("/generate-auto", async (req, res) => {
   }
 
   if (cronSecret !== process.env.CRON_SECRET) {
+    console.warn(`[${cronId}] Unauthorized cron request`);
+
     return res.status(401).json({
       success: false,
       message: "Unauthorized cron request",
@@ -42,15 +51,51 @@ router.post("/generate-auto", async (req, res) => {
   }
 
   try {
+    console.log(`[${cronId}] Starting gate code generation`);
+
     const result = await generateAndAssignGateCodes();
 
+    const durationMs = Date.now() - startedAt;
+
+    console.log(`[${cronId}] Raw result summary:`, {
+      success: result.success,
+      message: result.message,
+      deletedCount: result.deletedCount,
+      insertedCount: result.insertedCount,
+      assignedCount: result.assignedCount,
+      durationMs,
+    });
+
     if (!result.success) {
-      return res.status(500).json(result);
+      console.error(`[${cronId}] Gate code generation failed`, {
+        message: result.message,
+        durationMs,
+      });
+
+      return res.status(500).json({
+        success: false,
+        message: result.message || "Gate code generation failed",
+      });
     }
 
-    return res.json(result);
+    console.log(`[${cronId}] Gate code generation completed`);
+
+    return res.json({
+      success: true,
+      message: "Gate codes generated successfully",
+      deletedCount: result.deletedCount ?? null,
+      insertedCount: result.insertedCount ?? null,
+      assignedCount: result.assignedCount ?? null,
+      durationMs,
+    });
   } catch (err) {
-    console.error("Auto gate code generation error:", err);
+    const durationMs = Date.now() - startedAt;
+
+    console.error(`[${cronId}] Auto gate code generation error:`, {
+      message: err.message,
+      stack: err.stack,
+      durationMs,
+    });
 
     return res.status(500).json({
       success: false,
