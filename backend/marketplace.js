@@ -1,6 +1,43 @@
 const express = require('express');
 const router = express.Router();
+const { sendExpoPush } = require("./notifications/sendExpoPush"); 
 const pool = require('./db'); // adjust path
+
+async function notifyMarketplaceUsers({ sellerId, item }) {
+  try {
+    const tokenResult = await pool.query(
+      `
+      SELECT expo_push_token
+      FROM user_notification_settings
+      WHERE push_enabled = true
+        AND marketplace_enabled = true
+        AND expo_push_token IS NOT NULL
+        AND user_id <> $1
+      `,
+      [sellerId]
+    );
+
+    const tokens = tokenResult.rows.map((row) => row.expo_push_token);
+
+    if (tokens.length === 0) {
+      console.log("No marketplace notification recipients");
+      return;
+    }
+
+    await sendExpoPush(tokens, {
+      title: "New marketplace item",
+      body: `${item.prod_name} was listed for R${item.price}`,
+      data: {
+        type: "marketplace",
+        itemId: item.id,
+      },
+    });
+
+    console.log(`Marketplace notification sent to ${tokens.length} devices`);
+  } catch (err) {
+    console.error("Marketplace notification failed:", err);
+  }
+}
 
 /* =========================
    1. Fetch all items
@@ -39,7 +76,16 @@ router.post('/items', async (req, res) => {
       [user_id, prod_name, prod_desc, price, cell_no, JSON.stringify(images)]
     );
 
-    res.status(201).json({ success: true, item: result.rows[0] });
+    const createdItem = result.rows[0];
+
+    // Send response first so listing creation is never blocked by push failure
+    res.status(201).json({ success: true, item: createdItem });
+
+    // Fire-and-forget notification
+    notifyMarketplaceUsers({
+      sellerId: user_id,
+      item: createdItem,
+    });
 
   } catch (err) {
     console.error(err);

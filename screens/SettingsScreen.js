@@ -21,9 +21,11 @@ export default function SettingsScreen({ navigation }) {
   const { isDarkMode, setIsDarkMode } = useTheme();
   const PUSH_KEY = "pref_pushEnabled_v1";
   const SAFETY_KEY = "pref_safetyEnabled_v1";
+  const MARKETPLACE_KEY = "pref_marketplaceEnabled_v1";
 
   const [pushEnabled, setPushEnabled] = useState(true);
   const [safetyEnabled, setSafetyEnabled] = useState(false);
+  const [marketplaceEnabled, setMarketplaceEnabled] = useState(true);
   const [token, setToken] = useState(null);
 
   const [currentPassword, setCurrentPassword] = useState('');
@@ -45,8 +47,11 @@ export default function SettingsScreen({ navigation }) {
     (async () => {
       const p = await AsyncStorage.getItem(PUSH_KEY);
       const s = await AsyncStorage.getItem(SAFETY_KEY);
+      const m = await AsyncStorage.getItem(MARKETPLACE_KEY);
+
       if (p !== null) setPushEnabled(p === "true");
       if (s !== null) setSafetyEnabled(s === "true");
+      if (m !== null) setMarketplaceEnabled(m === "true");
     })();
   }, []);
 
@@ -69,6 +74,37 @@ export default function SettingsScreen({ navigation }) {
       setPushEnabled(prev => !prev);
       await AsyncStorage.setItem(PUSH_KEY, String(!value));
       Alert.alert("Notifications", e.message);
+    }
+  };
+
+  const onToggleMarketplace = async (value) => {
+    try {
+      setMarketplaceEnabled(value);
+      await AsyncStorage.setItem(MARKETPLACE_KEY, String(value));
+
+      if (value && !pushEnabled) {
+        await registerPush();
+        setPushEnabled(true);
+        await AsyncStorage.setItem(PUSH_KEY, "true");
+
+        await syncPushSettingsToServer({
+          pushEnabled: true,
+          safetyEnabled,
+          marketplaceEnabled: true,
+        });
+
+        return;
+      }
+
+      await syncPushSettingsToServer({
+        pushEnabled,
+        safetyEnabled,
+        marketplaceEnabled: value,
+      });
+    } catch (e) {
+      setMarketplaceEnabled((prev) => !prev);
+      await AsyncStorage.setItem(MARKETPLACE_KEY, String(!value));
+      Alert.alert("Marketplace alerts", e.message);
     }
   };
 
@@ -294,6 +330,18 @@ export default function SettingsScreen({ navigation }) {
           }
         />
 
+        <SettingItem
+          icon="storefront-outline"
+          title="Marketplace Alerts"
+          rightComponent={
+            <Switch
+              value={marketplaceEnabled}
+              onValueChange={onToggleMarketplace}
+              trackColor={{ false: "#555", true: "#85FF27" }}
+              thumbColor={marketplaceEnabled ? "#fff" : "#000"}
+            />
+          }
+        />
         <SettingItem
           icon="shield-outline"
           title="Alerts (Visitor entry/exit)"

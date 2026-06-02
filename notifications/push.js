@@ -92,10 +92,11 @@ export async function registerDeviceTokenWithServer(expoPushToken) {
 }
 
 // 3️⃣ Preferences
-export async function syncPushSettingsToServer({
-  pushEnabled,
-  safetyEnabled,
-}) {
+  export async function syncPushSettingsToServer({
+    pushEnabled,
+    safetyEnabled,
+    marketplaceEnabled,
+  }) {
   const token = await SecureStore.getItemAsync("token");
   if (!token) throw new Error("Not authenticated");
 
@@ -105,7 +106,11 @@ export async function syncPushSettingsToServer({
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ pushEnabled, safetyEnabled }),
+    body: JSON.stringify({
+      pushEnabled,
+      safetyEnabled,
+      marketplaceEnabled,
+    }),
   });
 
   const raw = await res.text();
