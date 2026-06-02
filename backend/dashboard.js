@@ -7,8 +7,6 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
   try {
     const userId = req.user.dbUserId;
 
-    console.log("dashboard auth payload:", req.user);
-
     /* 1️⃣ Gate code (current active week) */
     const gateCodeResult = await pool.query(
       `
@@ -23,8 +21,6 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
 
     const gateCode = gateCodeResult.rows[0]?.code || null;
     const weekEnd = gateCodeResult.rows[0]?.week_end || null;
-
-    console.log("Gate code fetched:", gateCode, "Week end:", weekEnd);
 
     const userResult = await pool.query(
       `SELECT role FROM com_users WHERE id = $1`,

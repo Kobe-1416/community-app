@@ -7,6 +7,47 @@ const {
   generateAndAssignGateCodes,
 } = require("./services/gateCodeService");
 
+router.post("/check", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role?.toLowerCase() !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden",
+      });
+    }
+
+    const { gateCode } = req.body;
+
+    if (!gateCode) {
+      return res.status(400).json({
+        success: false,
+        message: "Gate code is required",
+      });
+    }
+
+    const result = await pool.query(
+      `
+      SELECT id, code
+      FROM gate_codes
+      WHERE code = $1
+      LIMIT 1
+      `,
+      [gateCode.trim()]
+    );
+
+    return res.json({
+      success: true,
+      exists: result.rowCount > 0,
+      gateCode: result.rows[0] || null,
+    });
+  } catch (err) {
+    console.error("Gate code check error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to check gate code",
+    });
+  }
+});
 
 router.post("/generate", authenticateToken, async (req, res) => {
   if (req.user.role?.toLowerCase() !== "admin") {
@@ -43,8 +84,6 @@ router.post("/generate-auto", async (req, res) => {
   }
 
   if (cronSecret !== process.env.CRON_SECRET) {
-    console.log(`[${process.env.CRON_SECRET}]`);
-    console.log(`[${cronSecret}]`);
     console.warn(`[${cronId}] Unauthorized cron request`);
 
     return res.status(401).json({
