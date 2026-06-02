@@ -233,7 +233,7 @@ export default function HomeScreen({ navigation }) {
           </Pressable>
         )}
 
-      <Text style={styles.subtitle}>
+      <Text style={[styles.subtitle, isDarkMode && styles.darkSubtitle]}>
         Give the guard the code to exit and enter the community.
       </Text>
 
@@ -311,6 +311,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 20,
     width: "70%",
+  },
+  darkSubtitle: {
+    color: "#fff",
   },
   pressCards: {
     marginBottom: 15,
