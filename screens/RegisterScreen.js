@@ -11,6 +11,8 @@ import {
 import Button from "../components/Button";
 import Header from "../components/Header";
 import * as SecureStore from "expo-secure-store";
+import { colors } from "../styles/colors";
+import { useTheme } from "../context/ThemeContext";
 import React, { useState, useRef, useEffect } from "react";
 import { API_URL } from '../config';
 
@@ -22,6 +24,18 @@ export default function RegisterScreen({ navigation }) {
   const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
+  const { isDarkMode } = useTheme();
+  const themeColors = isDarkMode ? colors.dark : colors.light;
+
+  
+  const inputStyle = [
+    styles.input,
+    {
+      backgroundColor: themeColors.input,
+      borderColor: themeColors.border,
+      color: themeColors.text,
+    },
+  ];
 
   const fadeAnim = useRef(new Animated.Value(0.3)).current;
 
@@ -116,11 +130,47 @@ export default function RegisterScreen({ navigation }) {
         <Header title="CommunityApp" />
 
         <View style={styles.container}>
-          <TextInput style={styles.input} placeholder="Surname" value={surname} onChangeText={setSurname} />
-          <TextInput style={styles.input} placeholder="House Number" value={houseNumber} onChangeText={setHouseNumber}/>
-          <TextInput style={styles.input} placeholder="Street Name" value={streetName} onChangeText={setStreetName}/>
-          <TextInput style={styles.input} placeholder="Cellphone Number" keyboardType="numeric" value={phone} onChangeText={setPhone}/>
-          <TextInput style={styles.input} placeholder="Password" secureTextEntry value={password} onChangeText={setPassword}/>
+          <TextInput
+            style={inputStyle}
+            placeholder="Surname"
+            placeholderTextColor={themeColors.placeholder}
+            value={surname}
+            onChangeText={setSurname}
+          />
+
+          <TextInput
+            style={inputStyle}
+            placeholder="House Number"
+            placeholderTextColor={themeColors.placeholder}
+            value={houseNumber}
+            onChangeText={setHouseNumber}
+          />
+
+          <TextInput
+            style={inputStyle}
+            placeholder="Street Name"
+            placeholderTextColor={themeColors.placeholder}
+            value={streetName}
+            onChangeText={setStreetName}
+          />
+
+          <TextInput
+            style={inputStyle}
+            placeholder="Cellphone Number"
+            placeholderTextColor={themeColors.placeholder}
+            keyboardType="numeric"
+            value={phone}
+            onChangeText={setPhone}
+          />
+
+          <TextInput
+            style={inputStyle}
+            placeholder="Password"
+            placeholderTextColor={themeColors.placeholder}
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+          />
           <Button title="Register" onPress={handleRegister}/>
         </View>
       </ScrollView>
@@ -145,16 +195,13 @@ const styles = StyleSheet.create({
     width: "100%",
     marginTop: 40,
   },
-
   input: {
     width: "86%",
     padding: 15,
     borderWidth: 1,
-    borderColor: "#ccc",
     borderRadius: 8,
     marginBottom: 15,
   },
-
   overlay: {
     position: "absolute",
     top: 0,
