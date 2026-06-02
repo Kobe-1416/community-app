@@ -42,6 +42,8 @@ router.post("/generate-auto", async (req, res) => {
   }
 
   if (cronSecret !== process.env.CRON_SECRET) {
+    console.log(`[${process.env.CRON_SECRET}]`);
+    console.log(`[${cronSecret}]`);
     console.warn(`[${cronId}] Unauthorized cron request`);
 
     return res.status(401).json({
