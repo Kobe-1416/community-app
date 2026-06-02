@@ -86,9 +86,6 @@ export default function CreateListingScreen({ navigation, route }) {
           continue;
         }
 
-        console.log("Uploading image:", img);
-        console.log("Uploading to:", `${API_URL}/api/upload`);
-
         const formData = new FormData();
         formData.append("image", {
           uri: img,
@@ -100,7 +97,6 @@ export default function CreateListingScreen({ navigation, route }) {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
-            // ❌ DO NOT set Content-Type manually
           },
           body: formData,
         });
