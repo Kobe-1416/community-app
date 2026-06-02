@@ -9,5 +9,8 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use("/api", apiRouter);
+app.get("/health", (req, res) => {
+  res.json({ success: true });
+});
 
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));
