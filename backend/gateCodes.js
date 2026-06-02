@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const pool = require("./db");
+const { sendExpoPush } = require("./services/pushService");
 const authenticateToken = require("./middleware/auth");
 const {
   generateAndAssignGateCodes,
