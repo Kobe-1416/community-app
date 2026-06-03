@@ -10,6 +10,7 @@ import {
   TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as SecureStore from "expo-secure-store";
 import { useTheme } from "../context/ThemeContext";
 
 export default function MarketPlaceScreen({ navigation }) {
@@ -28,39 +29,54 @@ export default function MarketPlaceScreen({ navigation }) {
     return `${diffDays} days ago`;
   };
 
-  const fetchListings = async () => {
-  setLoading(true);
-  try {
-    const res = await fetch(`${API_URL}/api/market/items`);
-    const data = await res.json();
+    const fetchListings = async () => {
+    setLoading(true);
 
-    const mapped = data.items.map((item) => {
-      const createdDate = new Date(item.created_at);
-      const now = new Date();
-      const diffDays = Math.floor((now - createdDate) / (1000 * 60 * 60 * 24));
+    try {
+      const token = await SecureStore.getItemAsync("token");
 
-      return {
-        id: item.id.toString(),
-        title: item.prod_name,
-        description: item.prod_desc,
-        price: item.price,
-        phone: item.cell_no,
-        date: item.created_at,
-        isNew: diffDays <= 2,
-        images: Array.isArray(item.images) ? item.images : [],
-        thumbnail:
-          item.images?.[0] ||
-          "https://via.placeholder.com/300x200/CCCCCC/000000?text=Item",
-      };
-    });
+      const res = await fetch(`${API_URL}/api/market/items`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    setListings(mapped);
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setLoading(false);
-  }
-};
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.success) {
+        console.log("Marketplace fetch failed:", data);
+        setListings([]);
+        return;
+      }
+
+      const mapped = (data.items ?? []).map((item) => {
+        const createdDate = new Date(item.created_at);
+        const now = new Date();
+        const diffDays = Math.floor((now - createdDate) / (1000 * 60 * 60 * 24));
+
+        return {
+          id: item.id.toString(),
+          title: item.prod_name,
+          description: item.prod_desc,
+          price: item.price,
+          phone: item.cell_no,
+          date: item.created_at,
+          isNew: diffDays <= 2,
+          images: Array.isArray(item.images) ? item.images : [],
+          thumbnail:
+            item.images?.[0] ||
+            "https://via.placeholder.com/300x200/CCCCCC/000000?text=Item",
+        };
+      });
+
+      setListings(mapped);
+    } catch (err) {
+      console.error(err);
+      setListings([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchListings();
