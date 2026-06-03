@@ -27,13 +27,13 @@ router.post("/", authenticateToken, async (req, res) => {
       [userId]
     );
 
-    const createdBy = userResult.rows[0]?.surname || "Unknown Admin";
+    const createdBy = userId;
 
     // 2) Insert announcement
     const result = await pool.query(
       `INSERT INTO announcements (title, body, category, created_at, created_by)
-       VALUES ($1, $2, $3, NOW(), $4)
-       RETURNING id, title, body, category, created_at, created_by`,
+      VALUES ($1, $2, $3, NOW(), $4)
+      RETURNING id, title, body, category, created_at, created_by`,
       [title, body, category || "General", createdBy]
     );
 
@@ -69,9 +69,17 @@ router.post("/", authenticateToken, async (req, res) => {
 router.get("/", authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, title, body, created_at, category, created_by
-       FROM announcements
-       ORDER BY created_at DESC`
+      `SELECT 
+          a.id,
+          a.title,
+          a.body,
+          a.created_at,
+          a.category,
+          a.created_by,
+          cu.surname AS created_by_name
+      FROM announcements a
+      LEFT JOIN com_users cu ON cu.id = a.created_by
+      ORDER BY a.created_at DESC`
     );
 
     res.json({ success: true, announcements: result.rows });
