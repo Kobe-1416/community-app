@@ -6,7 +6,7 @@ const { sendExpoPush } = require("./services/pushService");
 const authenticateToken = require("./middleware/auth");
 
 // Create a new announcement (+ send push)
-router.post("/", async (req, res) => {
+router.post("/", authenticateToken, async (req, res) => {
   try {
     const { title, body, category } = req.body;
 
@@ -53,7 +53,7 @@ router.post("/", async (req, res) => {
 });
 
 // Get all announcements
-router.get("/", async (req, res) => {
+router.get("/", authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id, title, body, created_at, category
@@ -69,7 +69,7 @@ router.get("/", async (req, res) => {
 });
 
 // Cleanup old announcements
-router.delete("/cleanup", async (req, res) => {
+router.delete("/cleanup", authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
       `DELETE FROM announcements WHERE created_at < NOW() - INTERVAL '14 days'`

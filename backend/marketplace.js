@@ -42,7 +42,7 @@ async function notifyMarketplaceUsers({ sellerId, item }) {
 /* =========================
    1. Fetch all items
 ========================= */
-router.get('/items', async (req, res) => {
+router.get('/items', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id, user_id, prod_name, prod_desc, price, created_at, cell_no, images
@@ -61,7 +61,7 @@ router.get('/items', async (req, res) => {
 /* =========================
    2. Post new item
 ========================= */
-router.post('/items', async (req, res) => {
+router.post('/items', authenticateToken, async (req, res) => {
   try {
     const { user_id, prod_name, prod_desc, price, cell_no, images } = req.body;
 
@@ -97,7 +97,12 @@ router.post('/items', async (req, res) => {
 /* =========================
    3. Remove item
 ========================= */
-router.delete('/items/:id', async (req, res) => {
+router.delete('/items/:id', authenticateToken, async (req, res) => {
+  // only admin can delete items, users will ask admin to remove if needed
+  if (req.user.role?.toLowerCase() !== "admin") {
+    return res.status(403).json({ success: false, message: 'Forbidden' });
+  }
+
   try {
     const { id } = req.params;
 

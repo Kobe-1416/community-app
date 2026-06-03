@@ -66,6 +66,7 @@ router.post("/generate", authenticateToken, async (req, res) => {
   res.json(result);
 });
 
+// add security check to ensure only admin level users can call this endpoint
 router.post("/generate-auto", async (req, res) => {
   const cronId = `cron-${Date.now()}`;
   const startedAt = Date.now();
@@ -190,10 +191,5 @@ router.delete("/del", authenticateToken, async (req, res) => {
   }
 });
 
-// Debug
-router.get("/", async (req, res) => {
-  const result = await pool.query("SELECT * FROM gate_codes ORDER BY id");
-  res.json({ success: true, codes: result.rows });
-});
 
 module.exports = router;

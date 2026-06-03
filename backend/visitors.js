@@ -98,7 +98,7 @@ router.patch("/exit", authenticateToken, async (req, res) => {
  * GET /visitors/today
  * Do not forget to use the authenticateToken function when in production
  */
-router.get("/today", async (req, res) => {
+router.get("/today", authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT ve.id, v.name, ve.plate, ve.entry_time, ve.exit_time

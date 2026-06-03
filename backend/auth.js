@@ -12,10 +12,6 @@ const JWT_SECRET = process.env.JSON_WEB_TOKEN_SECRET;
 const JWT_EXPIRATION = process.env.JSON_EXPIRATION;
 
 
-router.get('/test', (req, res) => {
-  res.json({message: "Auth route is working"});
-});
-
 // POST /register
 router.post("/register", async (req, res) => {
   try {
