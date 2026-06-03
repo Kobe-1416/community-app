@@ -1,13 +1,18 @@
 import React, { useState } from "react";
-import { View, TextInput, Alert } from "react-native";
+import { View, TextInput, Alert, StyleSheet } from "react-native";
 import Button from "../../components/Button";
 import * as SecureStore from "expo-secure-store";
-import { API_URL } from '../../config';
+import { API_URL } from "../../config";
+import { useTheme } from "../../context/ThemeContext";
+import { colors } from "../../styles/colors";
 
 const BASE_URL = `${API_URL}`;
 const ADD_VISITOR_ENDPOINT = `${BASE_URL}/api/visitors/entry`;
 
 export default function AdminAddVisitorScreen({ navigation }) {
+  const { isDarkMode } = useTheme();
+  const themeColors = isDarkMode ? colors.dark : colors.light;
+
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [plate, setPlate] = useState("");
@@ -15,44 +20,39 @@ export default function AdminAddVisitorScreen({ navigation }) {
   const [hostResident, setHostResident] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const VALID_PROVINCES = ["GP","WC","EC","KZN","MP","LP","NW","NC","FS"];
-
-  const SPECIAL_PLATE_CODES = [
-  "CD",   // Diplomatic Corps
-  "CC",   // Consular Corps
-  "DC",   // Diplomatic staff (sometimes used interchangeably)
-  "M",    // Military (SANDF)
-  "SAPS", // Police
-  "GOV",  // Government vehicles (rare, varies)
-];
+  const VALID_PROVINCES = ["GP", "WC", "EC", "KZN", "MP", "LP", "NW", "NC", "FS"];
 
   const SA_PLATE_REGEX =
     /^(?:[A-Z]{2}\s\d{2}\s[A-Z]{2}\s[A-Z]{2}|[A-Z]{3}\s\d{3}\s[A-Z]{2})$/;
 
-  // Format plate safely
+  const inputStyle = [
+    styles.input,
+    {
+      backgroundColor: themeColors.input,
+      borderColor: themeColors.border,
+      color: themeColors.text,
+    },
+  ];
+
   function formatSAPlate(input) {
     const raw = input.replace(/\s+/g, "").toUpperCase();
 
     if (/^[A-Z]{2}\d{2}[A-Z]{4}$/.test(raw)) {
-      return `${raw.slice(0,2)} ${raw.slice(2,4)} ${raw.slice(4,6)} ${raw.slice(6)}`;
+      return `${raw.slice(0, 2)} ${raw.slice(2, 4)} ${raw.slice(4, 6)} ${raw.slice(6)}`;
     }
 
     if (/^[A-Z]{3}\d{3}[A-Z]{2}$/.test(raw)) {
-      return `${raw.slice(0,3)} ${raw.slice(3,6)} ${raw.slice(6)}`;
+      return `${raw.slice(0, 3)} ${raw.slice(3, 6)} ${raw.slice(6)}`;
     }
 
-    return input; // do not mutate invalid partial input
+    return input;
   }
 
-  // Validate plate
-    function validatePlate(formatted) {
+  function validatePlate(formatted) {
     const cleaned = formatted.trim().toUpperCase();
     const noSpaces = cleaned.replace(/\s+/g, "");
     const parts = cleaned.split(" ");
 
-    // -------------------------
-    // SPECIAL PLATES (CD / M / etc.)
-    // -------------------------
     const specialPrefixes = ["CD", "CC", "DC", "M", "SAPS", "GOV"];
 
     if (specialPrefixes.includes(parts[0]) || specialPrefixes.includes(noSpaces.slice(0, 2))) {
@@ -63,7 +63,6 @@ export default function AdminAddVisitorScreen({ navigation }) {
         return false;
       }
 
-      // Optional: light validation for length (prevents garbage input)
       if (noSpaces.length < 4 || noSpaces.length > 12) {
         Alert.alert("Invalid Plate", "Special plate number is incomplete");
         return false;
@@ -72,9 +71,6 @@ export default function AdminAddVisitorScreen({ navigation }) {
       return true;
     }
 
-    // -------------------------
-    // NORMAL PLATES
-    // -------------------------
     if (!SA_PLATE_REGEX.test(cleaned)) {
       Alert.alert(
         "Invalid Plate",
@@ -93,14 +89,14 @@ export default function AdminAddVisitorScreen({ navigation }) {
     return true;
   }
 
-    const handlePlateBlur = () => {
-      const formatted = formatSAPlate(plate.trim());
-      setPlate(formatted);
+  const handlePlateBlur = () => {
+    const formatted = formatSAPlate(plate.trim());
+    setPlate(formatted);
 
-      if (formatted.trim().length > 0) {
-        validatePlate(formatted);
-      }
-    };
+    if (formatted.trim().length > 0) {
+      validatePlate(formatted);
+    }
+  };
 
   const handleAddVisitor = async () => {
     if (!name.trim()) return Alert.alert("Error", "Enter visitor name");
@@ -110,6 +106,7 @@ export default function AdminAddVisitorScreen({ navigation }) {
     if (!validatePlate(plateFormatted)) return;
 
     setLoading(true);
+
     try {
       const token = await SecureStore.getItemAsync("token");
       if (!token) return Alert.alert("Error", "Not logged in");
@@ -138,7 +135,6 @@ export default function AdminAddVisitorScreen({ navigation }) {
 
       Alert.alert("Success", "Visitor added");
 
-      // reset form
       setName("");
       setSurname("");
       setPhone("");
@@ -154,48 +150,53 @@ export default function AdminAddVisitorScreen({ navigation }) {
   };
 
   return (
-    <View style={{ padding: 16, gap: 12 }}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: themeColors.background },
+      ]}
+    >
       <TextInput
         placeholder="Visitor Name"
-        placeholderTextColor="#888"
+        placeholderTextColor={themeColors.placeholder}
         value={name}
         onChangeText={setName}
-        style={{ borderWidth: 1, borderColor: "#ccc", padding: 12, borderRadius: 8 }}
+        style={inputStyle}
       />
 
       <TextInput
         placeholder="Visitor Surname"
-        placeholderTextColor="#888"
+        placeholderTextColor={themeColors.placeholder}
         value={surname}
         onChangeText={setSurname}
-        style={{ borderWidth: 1, borderColor: "#ccc", padding: 12, borderRadius: 8 }}
+        style={inputStyle}
       />
 
       <TextInput
         placeholder="Phone Number"
-        placeholderTextColor="#888"
+        placeholderTextColor={themeColors.placeholder}
         keyboardType="phone-pad"
         value={phone}
         onChangeText={setPhone}
-        style={{ borderWidth: 1, borderColor: "#ccc", padding: 12, borderRadius: 8 }}
+        style={inputStyle}
       />
 
       <TextInput
         placeholder="Car Plate Number. e.g. CA 12 AB GP"
-        placeholderTextColor="#888"
+        placeholderTextColor={themeColors.placeholder}
         value={plate}
-        onChangeText={setPlate}        // raw input only (no glitch)
-        onBlur={handlePlateBlur}       // format + validate
+        onChangeText={setPlate}
+        onBlur={handlePlateBlur}
         autoCapitalize="characters"
-        style={{ borderWidth: 1, borderColor: "#ccc", padding: 12, borderRadius: 8 }}
+        style={inputStyle}
       />
 
       <TextInput
         placeholder="Host Resident / Unit Number"
-        placeholderTextColor="#888"
+        placeholderTextColor={themeColors.placeholder}
         value={hostResident}
         onChangeText={setHostResident}
-        style={{ borderWidth: 1, borderColor: "#ccc", padding: 12, borderRadius: 8 }}
+        style={inputStyle}
       />
 
       <Button
@@ -205,3 +206,16 @@ export default function AdminAddVisitorScreen({ navigation }) {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 16,
+    gap: 12,
+  },
+  input: {
+    borderWidth: 1,
+    padding: 12,
+    borderRadius: 8,
+  },
+});

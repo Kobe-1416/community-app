@@ -1,16 +1,27 @@
-// screens/admin/AdminAnnouncementsScreen.js
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, Pressable, Alert, FlatList, StyleSheet, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  Alert,
+  Pressable,
+  FlatList,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native";
 import * as SecureStore from "expo-secure-store";
 import Button from "../../components/Button";
-import { API_URL } from '../../config';
+import { API_URL } from "../../config";
+import { useTheme } from "../../context/ThemeContext";
+import { colors } from "../../styles/colors";
 
 const BASE_URL = `${API_URL}`;
-const LIST_ENDPOINT = `${BASE_URL}/api/announcements`; // GET
-// Assumed delete: DELETE /api/announcements/:id
+const LIST_ENDPOINT = `${BASE_URL}/api/announcements`;
 const DELETE_ENDPOINT = (id) => `${BASE_URL}/api/announcements/${id}`;
 
-export default function AdminAnnouncementsScreen({ navigation }) {
+export default function AdminAnnouncementsScreen() {
+  const { isDarkMode } = useTheme();
+  const themeColors = isDarkMode ? colors.dark : colors.light;
+
   const [announcements, setAnnouncements] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [loadingList, setLoadingList] = useState(false);
@@ -23,6 +34,7 @@ export default function AdminAnnouncementsScreen({ navigation }) {
 
   const fetchAnnouncements = async () => {
     setLoadingList(true);
+
     try {
       const token = await SecureStore.getItemAsync("token");
 
@@ -31,10 +43,17 @@ export default function AdminAnnouncementsScreen({ navigation }) {
       });
 
       const data = await resp.json().catch(() => ({}));
-      if (!resp.ok) return Alert.alert("Error", data.message || "Failed to load announcements");
 
-      // Expect either { announcements: [...] } or { items: [...] } or raw []
-      const list = data.announcements ?? data.items ?? (Array.isArray(data) ? data : []);
+      if (!resp.ok) {
+        return Alert.alert(
+          "Error",
+          data.message || "Failed to load announcements"
+        );
+      }
+
+      const list =
+        data.announcements ?? data.items ?? (Array.isArray(data) ? data : []);
+
       setAnnouncements(list);
     } catch {
       Alert.alert("Network error", "Could not connect to server");
@@ -48,7 +67,9 @@ export default function AdminAnnouncementsScreen({ navigation }) {
   }, []);
 
   const handleDelete = async () => {
-    if (!selectedId) return Alert.alert("Select an announcement", "Tap one first");
+    if (!selectedId) {
+      return Alert.alert("Select an announcement", "Tap one first");
+    }
 
     Alert.alert(
       "Delete announcement?",
@@ -60,9 +81,13 @@ export default function AdminAnnouncementsScreen({ navigation }) {
           style: "destructive",
           onPress: async () => {
             setDeleting(true);
+
             try {
               const token = await SecureStore.getItemAsync("token");
-              if (!token) return Alert.alert("Error", "Not logged in");
+
+              if (!token) {
+                return Alert.alert("Error", "Not logged in");
+              }
 
               const resp = await fetch(DELETE_ENDPOINT(selectedId), {
                 method: "DELETE",
@@ -70,7 +95,13 @@ export default function AdminAnnouncementsScreen({ navigation }) {
               });
 
               const data = await resp.json().catch(() => ({}));
-              if (!resp.ok) return Alert.alert("Failed", data.message || "Could not delete");
+
+              if (!resp.ok) {
+                return Alert.alert(
+                  "Failed",
+                  data.message || "Could not delete"
+                );
+              }
 
               Alert.alert("Deleted", "Announcement removed");
               setSelectedId(null);
@@ -101,39 +132,74 @@ export default function AdminAnnouncementsScreen({ navigation }) {
     return (
       <Pressable
         onPress={() => setSelectedId(id)}
-        style={[styles.card, isSelected && styles.cardSelected]}
+        style={[
+          styles.card,
+          {
+            backgroundColor: themeColors.card,
+            borderColor: isSelected ? colors.primary : themeColors.border,
+          },
+        ]}
       >
-        <Text style={styles.title} numberOfLines={1}>
+        <Text
+          style={[styles.title, { color: themeColors.text }]}
+          numberOfLines={1}
+        >
           {item.title ?? "Untitled"}
         </Text>
 
         {!!item.body && (
-          <Text style={styles.body} numberOfLines={3}>
+          <Text
+            style={[styles.body, { color: themeColors.mutedText }]}
+            numberOfLines={3}
+          >
             {item.body}
           </Text>
         )}
 
         <View style={styles.metaRow}>
-          <Text style={styles.metaText}>By: {item.created_by ?? item.user_id ?? "-"}</Text>
-          <Text style={styles.metaText}>{formatDate(item.created_at)}</Text>
+          <Text
+            style={[styles.metaText, { color: themeColors.mutedText }]}
+            numberOfLines={1}
+          >
+            By: {item.created_by ?? item.user_id ?? "-"}
+          </Text>
+
+          <Text
+            style={[styles.metaText, { color: themeColors.mutedText }]}
+            numberOfLines={1}
+          >
+            {formatDate(item.created_at)}
+          </Text>
         </View>
 
-        {isSelected && <Text style={styles.selectedHint}>Selected</Text>}
+        {isSelected && (
+          <Text style={[styles.selectedHint, { color: colors.primary }]}>
+            Selected
+          </Text>
+        )}
       </Pressable>
     );
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: themeColors.background },
+      ]}
+    >
       <View style={styles.topRow}>
-        <Text style={styles.header}>Admin Announcements</Text>
-        
+        <Text style={[styles.header, { color: themeColors.text }]}>
+          Admin Announcements
+        </Text>
       </View>
 
       {loadingList ? (
         <View style={styles.center}>
-          <ActivityIndicator />
-          <Text style={{ marginTop: 8 }}>Loading...</Text>
+          <ActivityIndicator color={colors.primary} />
+          <Text style={[styles.loadingText, { color: themeColors.mutedText }]}>
+            Loading...
+          </Text>
         </View>
       ) : (
         <FlatList
@@ -143,23 +209,39 @@ export default function AdminAnnouncementsScreen({ navigation }) {
           contentContainerStyle={{ paddingBottom: 16 }}
           ListEmptyComponent={
             <View style={styles.center}>
-              <Text>No announcements yet.</Text>
+              <Text style={{ color: themeColors.mutedText }}>
+                No announcements yet.
+              </Text>
             </View>
           }
-          onRefresh={fetchAnnouncements}    // pull-to-refresh
-          refreshing={loadingList}          // spinner while fetching
+          onRefresh={fetchAnnouncements}
+          refreshing={loadingList}
         />
       )}
 
       <View style={styles.bottomBar}>
         <Button title="Refresh" onPress={fetchAnnouncements} />
         <View style={{ height: 10 }} />
-        <Button title={deleting ? "Deleting..." : "Delete Selected"} onPress={handleDelete} />
+        <Button
+          title={deleting ? "Deleting..." : "Delete Selected"}
+          onPress={handleDelete}
+        />
       </View>
 
       {!!selected && (
-        <View style={styles.selectionBar}>
-          <Text style={styles.selectionText} numberOfLines={1}>
+        <View
+          style={[
+            styles.selectionBar,
+            {
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            },
+          ]}
+        >
+          <Text
+            style={[styles.selectionText, { color: themeColors.text }]}
+            numberOfLines={1}
+          >
             Selected: {selected.title ?? "Untitled"}
           </Text>
         </View>
@@ -169,7 +251,10 @@ export default function AdminAnnouncementsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#fff" },
+  container: {
+    flex: 1,
+    padding: 16,
+  },
 
   topRow: {
     flexDirection: "row",
@@ -177,37 +262,49 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 12,
   },
-  header: { fontSize: 18, fontWeight: "700" },
 
-  createBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e5e5e5",
-    backgroundColor: "#fff",
+  header: {
+    fontSize: 18,
+    fontWeight: "700",
   },
-  createBtnText: { fontWeight: "700" },
 
   card: {
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#e5e5e5",
-    backgroundColor: "#fff",
     marginBottom: 10,
   },
-  cardSelected: { borderColor: "#85FF27" },
 
-  title: { fontWeight: "800", marginBottom: 6 },
-  body: { color: "#666" },
+  title: {
+    fontWeight: "800",
+    marginBottom: 6,
+  },
 
-  metaRow: { marginTop: 10, flexDirection: "row", justifyContent: "space-between" },
-  metaText: { color: "#777", fontSize: 12, flex: 1, marginRight: 10 },
+  body: {
+    lineHeight: 20,
+  },
 
-  selectedHint: { marginTop: 8, fontSize: 12, fontWeight: "700" },
+  metaRow: {
+    marginTop: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
 
-  bottomBar: { paddingTop: 8 },
+  metaText: {
+    fontSize: 12,
+    flex: 1,
+    marginRight: 10,
+  },
+
+  selectedHint: {
+    marginTop: 8,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+
+  bottomBar: {
+    paddingTop: 8,
+  },
 
   selectionBar: {
     position: "absolute",
@@ -216,11 +313,21 @@ const styles = StyleSheet.create({
     bottom: 140,
     padding: 10,
     borderRadius: 12,
-    backgroundColor: "#f3f3f3",
     borderWidth: 1,
-    borderColor: "#e5e5e5",
   },
-  selectionText: { fontSize: 12, fontWeight: "600" },
 
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
+  selectionText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  loadingText: {
+    marginTop: 8,
+  },
 });

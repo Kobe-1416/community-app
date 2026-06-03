@@ -1,18 +1,39 @@
 // screens/admin/AdminCreateAnnouncementScreen.js
 import React, { useState } from "react";
-import { View, Text, TextInput, Alert, StyleSheet, Pressable } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Alert,
+  StyleSheet,
+  Pressable,
+} from "react-native";
 import * as SecureStore from "expo-secure-store";
 import Button from "../../components/Button";
-import { API_URL } from '../../config';
+import { API_URL } from "../../config";
+import { useTheme } from "../../context/ThemeContext";
+import { colors } from "../../styles/colors";
 
 const BASE_URL = `${API_URL}`;
 const CREATE_ENDPOINT = `${BASE_URL}/api/announcements`;
 
 export default function AdminCreateAnnouncementScreen({ navigation }) {
+  const { isDarkMode } = useTheme();
+  const themeColors = isDarkMode ? colors.dark : colors.light;
+
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [category, setCategory] = useState("general"); // default
+  const [category, setCategory] = useState("general");
   const [loading, setLoading] = useState(false);
+
+  const inputStyle = [
+    styles.input,
+    {
+      backgroundColor: themeColors.input,
+      borderColor: themeColors.border,
+      color: themeColors.text,
+    },
+  ];
 
   const handleCreate = async () => {
     if (!title.trim() || !body.trim()) {
@@ -20,6 +41,7 @@ export default function AdminCreateAnnouncementScreen({ navigation }) {
     }
 
     setLoading(true);
+
     try {
       const token = await SecureStore.getItemAsync("token");
       if (!token) return Alert.alert("Error", "Not logged in");
@@ -33,15 +55,21 @@ export default function AdminCreateAnnouncementScreen({ navigation }) {
         body: JSON.stringify({
           title: title.trim(),
           body: body.trim(),
-          category, // <-- send to backend
+          category,
         }),
       });
 
       const data = await resp.json().catch(() => ({}));
-      if (!resp.ok)
-        return Alert.alert("Failed", data.message || "Could not create announcement");
+
+      if (!resp.ok) {
+        return Alert.alert(
+          "Failed",
+          data.message || "Could not create announcement"
+        );
+      }
 
       Alert.alert("Success", "Announcement posted");
+
       setTitle("");
       setBody("");
       setCategory("general");
@@ -55,22 +83,33 @@ export default function AdminCreateAnnouncementScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Create Announcement</Text>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: themeColors.background },
+      ]}
+    >
+      <Text style={[styles.header, { color: themeColors.text }]}>
+        Create Announcement
+      </Text>
 
       <TextInput
         value={title}
         onChangeText={setTitle}
         placeholder="Title"
-        style={styles.input}
+        placeholderTextColor={themeColors.placeholder}
+        style={inputStyle}
         maxLength={80}
       />
 
-      {/* CATEGORY SELECTOR */}
       <View style={styles.categoryRow}>
         <Pressable
           style={[
             styles.categoryBtn,
+            {
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            },
             category === "general" && styles.categorySelected,
           ]}
           onPress={() => setCategory("general")}
@@ -78,6 +117,7 @@ export default function AdminCreateAnnouncementScreen({ navigation }) {
           <Text
             style={[
               styles.categoryText,
+              { color: themeColors.text },
               category === "general" && styles.categoryTextSelected,
             ]}
           >
@@ -88,6 +128,10 @@ export default function AdminCreateAnnouncementScreen({ navigation }) {
         <Pressable
           style={[
             styles.categoryBtn,
+            {
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            },
             category === "urgent" && styles.urgentSelected,
           ]}
           onPress={() => setCategory("urgent")}
@@ -95,6 +139,7 @@ export default function AdminCreateAnnouncementScreen({ navigation }) {
           <Text
             style={[
               styles.categoryText,
+              { color: themeColors.text },
               category === "urgent" && styles.categoryTextSelected,
             ]}
           >
@@ -107,7 +152,8 @@ export default function AdminCreateAnnouncementScreen({ navigation }) {
         value={body}
         onChangeText={setBody}
         placeholder="Message"
-        style={[styles.input, styles.textArea]}
+        placeholderTextColor={themeColors.placeholder}
+        style={[inputStyle, styles.textArea]}
         multiline
       />
 
@@ -120,20 +166,30 @@ export default function AdminCreateAnnouncementScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#fff" },
-  header: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
+  container: {
+    flex: 1,
+    padding: 16,
+  },
+
+  header: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 12,
+  },
 
   input: {
     borderWidth: 1,
-    borderColor: "#e5e5e5",
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
     marginBottom: 12,
-    backgroundColor: "#fff",
+    fontSize: 16,
   },
 
-  textArea: { minHeight: 140, textAlignVertical: "top" },
+  textArea: {
+    minHeight: 140,
+    textAlignVertical: "top",
+  },
 
   categoryRow: {
     flexDirection: "row",
@@ -145,15 +201,13 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#e5e5e5",
     alignItems: "center",
     marginRight: 8,
-    backgroundColor: "#fff",
   },
 
   categorySelected: {
     backgroundColor: "#eaeaea",
-    borderColor: "#999",
+    borderColor: "#85FF27",
   },
 
   urgentSelected: {
@@ -163,10 +217,10 @@ const styles = StyleSheet.create({
 
   categoryText: {
     fontWeight: "600",
-    color: "#333",
   },
 
   categoryTextSelected: {
     fontWeight: "800",
+    color: "#000",
   },
 });
