@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { API_URL } from '../config';
+import React, { useState, useCallback } from "react";
+import { API_URL } from "../config";
 import {
   View,
   StyleSheet,
@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as SecureStore from "expo-secure-store";
+import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../context/ThemeContext";
 
 export default function NoticeBoardScreen() {
@@ -18,11 +19,14 @@ export default function NoticeBoardScreen() {
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [announcements, setAnnouncements] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   const BASE_URL = `${API_URL}`;
 
   const fetchAnnouncements = async () => {
     try {
+      setRefreshing(true);
+
       const token = await SecureStore.getItemAsync("token");
 
       const res = await fetch(`${BASE_URL}/api/announcements`, {
@@ -30,30 +34,40 @@ export default function NoticeBoardScreen() {
           Authorization: `Bearer ${token}`,
         },
       });
-      const json = await res.json();
 
-      if (!json.success) return;
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok || !json.success) {
+        console.log("Failed to load announcements:", json);
+        return;
+      }
 
       setAnnouncements(
-        json.announcements.map((a) => ({
+        (json.announcements ?? []).map((a) => ({
           id: String(a.id),
           title: a.title,
           body: a.body,
           date: a.created_at,
           category: a.category || "General",
+          createdBy: a.created_by_name || "Unknown",
         }))
       );
     } catch (err) {
       console.warn("Failed to load announcements", err);
+    } finally {
+      setRefreshing(false);
     }
   };
 
-  useEffect(() => {
-    fetchAnnouncements();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchAnnouncements();
+    }, [])
+  );
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
+
     return date.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
@@ -61,50 +75,66 @@ export default function NoticeBoardScreen() {
     });
   };
 
+  const normalizeCategory = (category) => {
+    if (!category) return "General";
+    return category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
+  };
+
   const filteredAnnouncements = announcements.filter((item) =>
     (item.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
     (item.body || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (item.category || "").toLowerCase().includes(searchQuery.toLowerCase())
+    (item.category || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (item.createdBy || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getCategoryBg = (category) => {
-    return category === "Security"
+    const normalized = normalizeCategory(category);
+
+    return normalized === "Security"
       ? "#ffeaa7"
-      : category === "Maintenance"
+      : normalized === "Maintenance"
       ? "#a29bfe"
-      : category === "Meeting"
+      : normalized === "Meeting"
       ? "#fd79a8"
-      : category === "Urgent"
+      : normalized === "Urgent"
       ? "#ff4a4a"
       : "#a0cfe4";
   };
 
-  const AnnouncementCard = ({ item }) => (
-    <View style={[styles.card, isDarkMode && styles.cardDark]}>
-      <View style={styles.cardHeader}>
-        <View
-          style={[
-            styles.categoryBadge,
-            { backgroundColor: getCategoryBg(item.category) },
-          ]}
-        >
-          <Text style={styles.categoryText}>{item.category}</Text>
+  const AnnouncementCard = ({ item }) => {
+    const category = normalizeCategory(item.category);
+
+    return (
+      <View style={[styles.card, isDarkMode && styles.cardDark]}>
+        <View style={styles.cardHeader}>
+          <View
+            style={[
+              styles.categoryBadge,
+              { backgroundColor: getCategoryBg(category) },
+            ]}
+          >
+            <Text style={styles.categoryText}>{category}</Text>
+          </View>
+
+          <Text style={[styles.date, isDarkMode && styles.mutedTextDark]}>
+            {formatDate(item.date)}
+          </Text>
         </View>
 
-        <Text style={[styles.date, isDarkMode && styles.mutedTextDark]}>
-          {formatDate(item.date)}
+        <Text style={[styles.title, isDarkMode && styles.textDark]}>
+          {item.title}
+        </Text>
+
+        <Text style={[styles.createdBy, isDarkMode && styles.mutedTextDark]}>
+          Posted by: {item.createdBy}
+        </Text>
+
+        <Text style={[styles.body, isDarkMode && styles.mutedTextDark]}>
+          {item.body}
         </Text>
       </View>
-
-      <Text style={[styles.title, isDarkMode && styles.textDark]}>
-        {item.title}
-      </Text>
-
-      <Text style={[styles.body, isDarkMode && styles.mutedTextDark]}>
-        {item.body}
-      </Text>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={[styles.container, isDarkMode && styles.containerDark]}>
@@ -141,10 +171,20 @@ export default function NoticeBoardScreen() {
         data={filteredAnnouncements}
         renderItem={({ item }) => <AnnouncementCard item={item} />}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={[styles.listContainer, isDarkMode && styles.listContainerDark]}
+        contentContainerStyle={[
+          styles.listContainer,
+          isDarkMode && styles.listContainerDark,
+        ]}
         showsVerticalScrollIndicator={false}
-        onRefresh={fetchAnnouncements} // triggers fetchAnnouncements
-        refreshing={false}             // set to true if you want a loading spinner
+        onRefresh={fetchAnnouncements}
+        refreshing={refreshing}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={[styles.emptyText, isDarkMode && styles.mutedTextDark]}>
+              No announcements found.
+            </Text>
+          </View>
+        }
       />
 
       <Pressable
@@ -166,6 +206,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f5f5f5",
   },
+
   containerDark: {
     backgroundColor: "#121212",
   },
@@ -179,6 +220,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
   },
+
   searchContainerDark: {
     backgroundColor: "#1e1e1e",
     borderBottomColor: "#333",
@@ -193,6 +235,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#111",
   },
+
   searchInputDark: {
     backgroundColor: "#2a2a2a",
     color: "#fff",
@@ -209,6 +252,7 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
     backgroundColor: "#f5f5f5",
   },
+
   listContainerDark: {
     backgroundColor: "#121212",
   },
@@ -226,6 +270,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#eee",
   },
+
   cardDark: {
     backgroundColor: "#1e1e1e",
     borderColor: "#333",
@@ -245,6 +290,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 20,
   },
+
   categoryText: {
     fontSize: 12,
     fontWeight: "600",
@@ -260,6 +306,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: "#000",
+    marginBottom: 4,
+  },
+
+  createdBy: {
+    fontSize: 13,
+    color: "#666",
     marginBottom: 8,
   },
 
@@ -272,8 +324,19 @@ const styles = StyleSheet.create({
   textDark: {
     color: "#fff",
   },
+
   mutedTextDark: {
     color: "#bbb",
+  },
+
+  emptyContainer: {
+    alignItems: "center",
+    marginTop: 40,
+  },
+
+  emptyText: {
+    color: "#666",
+    fontSize: 14,
   },
 
   floatingButton: {
@@ -294,6 +357,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#c7c7c7",
   },
+
   floatingButtonDark: {
     borderColor: "#333",
   },
