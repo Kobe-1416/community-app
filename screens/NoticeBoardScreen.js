@@ -9,6 +9,7 @@ import {
   FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as SecureStore from "expo-secure-store";
 import { useTheme } from "../context/ThemeContext";
 
 export default function NoticeBoardScreen() {
@@ -22,7 +23,13 @@ export default function NoticeBoardScreen() {
 
   const fetchAnnouncements = async () => {
     try {
-      const res = await fetch(`${BASE_URL}/api/announcements`);
+      const token = await SecureStore.getItemAsync("token");
+
+      const res = await fetch(`${BASE_URL}/api/announcements`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       const json = await res.json();
 
       if (!json.success) return;
