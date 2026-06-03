@@ -2,8 +2,6 @@ import {
   View, 
   StyleSheet, 
   TextInput, 
-  Text, 
-  Pressable, 
   ScrollView,
   ActivityIndicator,
   Animated,
@@ -14,7 +12,7 @@ import * as SecureStore from "expo-secure-store";
 import { colors } from "../styles/colors";
 import { useTheme } from "../context/ThemeContext";
 import React, { useState, useRef, useEffect } from "react";
-import { API_URL } from '../config';
+import { API_URL } from "../config";
 
 export default function RegisterScreen({ navigation }) {
   const [surname, setSurname] = useState("");
@@ -22,12 +20,13 @@ export default function RegisterScreen({ navigation }) {
   const [streetName, setStreetName] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
+
   const { isDarkMode } = useTheme();
   const themeColors = isDarkMode ? colors.dark : colors.light;
 
-  
   const inputStyle = [
     styles.input,
     {
@@ -61,10 +60,22 @@ export default function RegisterScreen({ navigation }) {
   }, [loading]);
 
   const handleRegister = async () => {
-    if (loading) return; // prevent spam
+    if (loading) return;
 
-    if (!surname || !houseNumber || !streetName || !phone || !password) {
+    if (
+      !surname ||
+      !houseNumber ||
+      !streetName ||
+      !phone ||
+      !password ||
+      !confirmPassword
+    ) {
       alert("Please fill in all fields");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      alert("Passwords do not match");
       return;
     }
 
@@ -93,7 +104,6 @@ export default function RegisterScreen({ navigation }) {
         return;
       }
 
-      // Auto login
       const loginResp = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: {
@@ -171,14 +181,24 @@ export default function RegisterScreen({ navigation }) {
             value={password}
             onChangeText={setPassword}
           />
-          <Button title="Register" onPress={handleRegister}/>
+
+          <TextInput
+            style={inputStyle}
+            placeholder="Confirm Password"
+            placeholderTextColor={themeColors.placeholder}
+            secureTextEntry
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+          />
+
+          <Button title="Register" onPress={handleRegister} />
         </View>
       </ScrollView>
 
-      {/* Overlay */}
       {loading && (
         <View style={styles.overlay}>
           <ActivityIndicator size="large" color="#fff" />
+
           <Animated.Text style={[styles.overlayText, { opacity: fadeAnim }]}>
             Creating Account...
           </Animated.Text>
@@ -195,6 +215,7 @@ const styles = StyleSheet.create({
     width: "100%",
     marginTop: 40,
   },
+
   input: {
     width: "86%",
     padding: 15,
@@ -202,6 +223,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 15,
   },
+
   overlay: {
     position: "absolute",
     top: 0,

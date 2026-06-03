@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { API_URL } from '../config';
+import React, { useState, useCallback } from "react";
+import { API_URL } from "../config";
 import {
   View,
   StyleSheet,
@@ -11,10 +11,12 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as SecureStore from "expo-secure-store";
+import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../context/ThemeContext";
 
 export default function MarketPlaceScreen({ navigation }) {
   const { isDarkMode } = useTheme();
+
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -26,14 +28,36 @@ export default function MarketPlaceScreen({ navigation }) {
 
     if (diffDays === 1) return "Yesterday";
     if (diffDays === 0) return "Today";
+
     return `${diffDays} days ago`;
   };
 
-    const fetchListings = async () => {
+  const parseImages = (images) => {
+    if (Array.isArray(images)) return images;
+
+    if (typeof images === "string") {
+      try {
+        const parsed = JSON.parse(images);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    return [];
+  };
+
+  const fetchListings = async () => {
     setLoading(true);
 
     try {
       const token = await SecureStore.getItemAsync("token");
+
+      if (!token) {
+        console.log("No token found for marketplace request");
+        setListings([]);
+        return;
+      }
 
       const res = await fetch(`${API_URL}/api/market/items`, {
         headers: {
@@ -52,7 +76,11 @@ export default function MarketPlaceScreen({ navigation }) {
       const mapped = (data.items ?? []).map((item) => {
         const createdDate = new Date(item.created_at);
         const now = new Date();
-        const diffDays = Math.floor((now - createdDate) / (1000 * 60 * 60 * 24));
+        const diffDays = Math.floor(
+          (now - createdDate) / (1000 * 60 * 60 * 24)
+        );
+
+        const images = parseImages(item.images);
 
         return {
           id: item.id.toString(),
@@ -62,83 +90,102 @@ export default function MarketPlaceScreen({ navigation }) {
           phone: item.cell_no,
           date: item.created_at,
           isNew: diffDays <= 2,
-          images: Array.isArray(item.images) ? item.images : [],
+          images,
           thumbnail:
-            item.images?.[0] ||
+            images[0] ||
             "https://via.placeholder.com/300x200/CCCCCC/000000?text=Item",
         };
       });
 
       setListings(mapped);
     } catch (err) {
-      console.error(err);
+      console.error("Marketplace fetch error:", err);
       setListings([]);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchListings();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchListings();
+    }, [])
+  );
 
   const ListingCard = ({ item }) => (
-  <Pressable
-    style={[styles.card, isDarkMode && styles.cardDark]}
-    onPress={() => navigation.navigate("ListingDetails", { listing: item })}
-  >
-    {item.isNew && (
-      <View style={styles.badge}>
-        <Text style={styles.badgeText}>NEW</Text>
-      </View>
-    )}
+    <Pressable
+      style={[styles.card, isDarkMode && styles.cardDark]}
+      onPress={() => navigation.navigate("ListingDetails", { listing: item })}
+    >
+      {item.isNew && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>NEW</Text>
+        </View>
+      )}
 
-    <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} resizeMode="cover" />
+      <Image
+        source={{ uri: item.thumbnail }}
+        style={styles.thumbnail}
+        resizeMode="cover"
+      />
 
-    <View style={styles.cardContent}>
-      <View style={styles.titleRow}>
-        <Text style={[styles.title, isDarkMode && styles.textDark]} numberOfLines={1}>
-          {item.title}
-        </Text>
-        <Text style={styles.price}>R{Number(item.price).toLocaleString()}</Text>
-      </View>
+      <View style={styles.cardContent}>
+        <View style={styles.titleRow}>
+          <Text
+            style={[styles.title, isDarkMode && styles.textDark]}
+            numberOfLines={1}
+          >
+            {item.title}
+          </Text>
 
-      <Text
-        style={[styles.description, isDarkMode && styles.mutedTextDark]}
-        numberOfLines={2}
-      >
-        {item.description}
-      </Text>
-
-      <View style={styles.footer}>
-        <View style={styles.contactRow}>
-          <Ionicons
-            name="call-outline"
-            size={16}
-            color={isDarkMode ? "#bbb" : "#666"}
-          />
-          <Text style={[styles.phone, isDarkMode && styles.mutedTextDark]}>
-            {item.phone}
+          <Text style={styles.price}>
+            R{Number(item.price).toLocaleString()}
           </Text>
         </View>
 
-        <Text style={[styles.date, isDarkMode && styles.mutedTextDark]}>
-          {formatDate(item.date)}
+        <Text
+          style={[styles.description, isDarkMode && styles.mutedTextDark]}
+          numberOfLines={2}
+        >
+          {item.description}
         </Text>
+
+        <View style={styles.footer}>
+          <View style={styles.contactRow}>
+            <Ionicons
+              name="call-outline"
+              size={16}
+              color={isDarkMode ? "#bbb" : "#666"}
+            />
+
+            <Text style={[styles.phone, isDarkMode && styles.mutedTextDark]}>
+              {item.phone}
+            </Text>
+          </View>
+
+          <Text style={[styles.date, isDarkMode && styles.mutedTextDark]}>
+            {formatDate(item.date)}
+          </Text>
+        </View>
       </View>
-    </View>
-  </Pressable>
-);
+    </Pressable>
+  );
 
   return (
     <View style={[styles.container, isDarkMode && styles.containerDark]}>
-      <View style={[styles.searchContainer, isDarkMode && styles.searchContainerDark]}>
+      <View
+        style={[
+          styles.searchContainer,
+          isDarkMode && styles.searchContainerDark,
+        ]}
+      >
         <Ionicons
           name="search"
           size={20}
           color={isDarkMode ? "#bbb" : "#666"}
           style={styles.searchIcon}
         />
+
         <TextInput
           style={[styles.searchInput, isDarkMode && styles.searchInputDark]}
           placeholder="Search marketplace..."
@@ -152,22 +199,19 @@ export default function MarketPlaceScreen({ navigation }) {
         keyExtractor={(item) => item.id}
         numColumns={2}
         columnWrapperStyle={styles.row}
-        contentContainerStyle={[styles.listContainer, isDarkMode && styles.listContainerDark]}
+        contentContainerStyle={[
+          styles.listContainer,
+          isDarkMode && styles.listContainerDark,
+        ]}
         showsVerticalScrollIndicator={false}
-        onRefresh={fetchListings}     // <-- pull-to-refresh
-        refreshing={loading}           // <-- loading spinner
+        onRefresh={fetchListings}
+        refreshing={loading}
       />
 
       <Pressable
         pointerEvents="box-none"
         style={[styles.addButton, isDarkMode && styles.addButtonDark]}
-        onPress={() =>
-          navigation.navigate("CreateListing", {
-            onCreate: (newListing) => {
-              setListings((prev) => [newListing, ...prev]);  // prepend new item
-            },
-          })
-        }
+        onPress={() => navigation.navigate("CreateListing")}
       >
         <Ionicons name="add" size={32} color="#000" />
       </Pressable>
@@ -176,8 +220,14 @@ export default function MarketPlaceScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8f8f8" },
-  containerDark: { backgroundColor: "#121212" },
+  container: {
+    flex: 1,
+    backgroundColor: "#f8f8f8",
+  },
+
+  containerDark: {
+    backgroundColor: "#121212",
+  },
 
   searchContainer: {
     flexDirection: "row",
@@ -196,22 +246,42 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#eee",
   },
+
   searchContainerDark: {
     backgroundColor: "#1e1e1e",
     borderColor: "#333",
-    shadowOpacity: 0, // shadows look dirty on dark; optional
+    shadowOpacity: 0,
     elevation: 0,
   },
 
-  searchIcon: { marginRight: 10 },
+  searchIcon: {
+    marginRight: 10,
+  },
 
-  searchInput: { flex: 1, height: "100%", fontSize: 16, color: "#333" },
-  searchInputDark: { color: "#fff" },
+  searchInput: {
+    flex: 1,
+    height: "100%",
+    fontSize: 16,
+    color: "#333",
+  },
 
-  listContainer: { paddingHorizontal: 10, paddingBottom: 100 },
-  listContainerDark: { backgroundColor: "#121212" },
+  searchInputDark: {
+    color: "#fff",
+  },
 
-  row: { justifyContent: "space-between", marginBottom: 15 },
+  listContainer: {
+    paddingHorizontal: 10,
+    paddingBottom: 100,
+  },
+
+  listContainerDark: {
+    backgroundColor: "#121212",
+  },
+
+  row: {
+    justifyContent: "space-between",
+    marginBottom: 15,
+  },
 
   card: {
     width: "48%",
@@ -226,6 +296,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#eee",
   },
+
   cardDark: {
     backgroundColor: "#1e1e1e",
     borderColor: "#333",
@@ -243,11 +314,22 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     zIndex: 1,
   },
-  badgeText: { fontSize: 10, fontWeight: "bold", color: "#000" },
 
-  thumbnail: { width: "100%", height: 140, backgroundColor: "#e0e0e0" },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: "bold",
+    color: "#000",
+  },
 
-  cardContent: { padding: 12 },
+  thumbnail: {
+    width: "100%",
+    height: 140,
+    backgroundColor: "#e0e0e0",
+  },
+
+  cardContent: {
+    padding: 12,
+  },
 
   titleRow: {
     flexDirection: "row",
@@ -256,22 +338,56 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 
-  title: { fontSize: 16, fontWeight: "600", color: "#000", flex: 1, marginRight: 8 },
+  title: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#000",
+    flex: 1,
+    marginRight: 8,
+  },
 
-  price: { fontSize: 18, fontWeight: "bold", color: "#85FF27" },
+  price: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#85FF27",
+  },
 
-  description: { fontSize: 14, color: "#666", lineHeight: 18, marginBottom: 12 },
+  description: {
+    fontSize: 14,
+    color: "#666",
+    lineHeight: 18,
+    marginBottom: 12,
+  },
 
-  footer: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
 
-  contactRow: { flexDirection: "row", alignItems: "center" },
+  contactRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
 
-  phone: { fontSize: 13, color: "#666", marginLeft: 5 },
+  phone: {
+    fontSize: 13,
+    color: "#666",
+    marginLeft: 5,
+  },
 
-  date: { fontSize: 12, color: "#888" },
+  date: {
+    fontSize: 12,
+    color: "#888",
+  },
 
-  textDark: { color: "#fff" },
-  mutedTextDark: { color: "#bbb" },
+  textDark: {
+    color: "#fff",
+  },
+
+  mutedTextDark: {
+    color: "#bbb",
+  },
 
   addButton: {
     position: "absolute",
@@ -291,6 +407,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#c7c7c7",
   },
+
   addButtonDark: {
     borderColor: "#333",
   },
