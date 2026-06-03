@@ -43,7 +43,7 @@ async function notifyMarketplaceUsers({ sellerId, item }) {
 /* =========================
    1. Fetch all items
 ========================= */
-router.get('/items', authenticateToken, async (req, res) => {
+router.get('/items', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id, user_id, prod_name, prod_desc, price, created_at, cell_no, images
