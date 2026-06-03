@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { sendExpoPush } = require("./services/pushService"); 
+const authenticateToken = require('./middleware/auth');
 const pool = require('./db'); // adjust path
 
 async function notifyMarketplaceUsers({ sellerId, item }) {

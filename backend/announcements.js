@@ -7,8 +7,13 @@ const authenticateToken = require("./middleware/auth");
 
 // Create a new announcement (+ send push)
 router.post("/", authenticateToken, async (req, res) => {
+  if (req.user.role?.toLowerCase() !== "admin") {
+    return res.status(403).json({ success: false, message: "Forbidden" });
+  }
+
   try {
     const { title, body, category } = req.body;
+    const userId = req.user.dbUserId;
 
     if (!title || !body) {
       return res
@@ -16,17 +21,25 @@ router.post("/", authenticateToken, async (req, res) => {
         .json({ success: false, message: "Title and body required" });
     }
 
-    // 1) Insert announcement
+    // 1) Get creator name
+    const userResult = await pool.query(
+      `SELECT surname FROM com_users WHERE id = $1 LIMIT 1`,
+      [userId]
+    );
+
+    const createdBy = userResult.rows[0]?.surname || "Unknown Admin";
+
+    // 2) Insert announcement
     const result = await pool.query(
-      `INSERT INTO announcements (title, body, category, created_at)
-       VALUES ($1, $2, $3, NOW())
-       RETURNING id, title, body, category, created_at`,
-      [title, body, category || "General"]
+      `INSERT INTO announcements (title, body, category, created_at, created_by)
+       VALUES ($1, $2, $3, NOW(), $4)
+       RETURNING id, title, body, category, created_at, created_by`,
+      [title, body, category || "General", createdBy]
     );
 
     const announcement = result.rows[0];
 
-    // 2) Get tokens for users who enabled push
+    // 3) Get tokens for users who enabled push
     const tokensResult = await pool.query(
       `SELECT expo_push_token
        FROM user_notification_settings
@@ -36,7 +49,7 @@ router.post("/", authenticateToken, async (req, res) => {
 
     const tokens = tokensResult.rows.map((r) => r.expo_push_token);
 
-    // 3) Send push (don’t fail the request if push fails)
+    // 4) Send push without blocking announcement creation
     if (tokens.length > 0) {
       sendExpoPush(tokens, {
         title: "New announcement",
@@ -56,7 +69,7 @@ router.post("/", authenticateToken, async (req, res) => {
 router.get("/", authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, title, body, created_at, category
+      `SELECT id, title, body, created_at, category, created_by
        FROM announcements
        ORDER BY created_at DESC`
     );
@@ -69,17 +82,18 @@ router.get("/", authenticateToken, async (req, res) => {
 });
 
 // Cleanup old announcements
-router.delete("/cleanup", authenticateToken, async (req, res) => {
-  try {
-    const result = await pool.query(
-      `DELETE FROM announcements WHERE created_at < NOW() - INTERVAL '14 days'`
-    );
+router.delete("/cleanup-auto", async (req, res) => {
+  const cronSecret = req.headers["x-cron-secret"];
 
-    res.json({ success: true, deleted: result.rowCount });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: "Server error" });
+  if (cronSecret !== process.env.CRON_SECRET) {
+    return res.status(401).json({ success: false, message: "Unauthorized" });
   }
+
+  const result = await pool.query(
+    `DELETE FROM announcements WHERE created_at < NOW() - INTERVAL '21 days'`
+  );
+
+  res.json({ success: true, deleted: result.rowCount });
 });
 
 router.delete("/:id", authenticateToken, async (req, res) => {
