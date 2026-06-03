@@ -8,6 +8,10 @@ const {
 } = require("./services/gateCodeService");
 
 router.post("/check", authenticateToken, async (req, res) => {
+    if (req.user.role?.toLowerCase() !== "admin" || req.user.role?.toLowerCase() === "security") {
+     return res.status(403).json({ message: "Forbidden" });
+   }
+
   try {
     if (req.user.role?.toLowerCase() !== "admin") {
       return res.status(403).json({

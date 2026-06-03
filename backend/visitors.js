@@ -17,6 +17,10 @@ TABLES ASSUMED:
  * Do not forget to use the authenticateToken function when in production
  */
 router.post("/entry", authenticateToken, async (req, res) => {
+  if (req.user.role?.toLowerCase() !== "admin" || req.user.role?.toLowerCase() === "security") {
+     return res.status(403).json({ message: "Forbidden" });
+   }
+
   const { name, surname, phone, plate, host_resident } = req.body;
 
   if (!plate || !host_resident) {
@@ -67,6 +71,10 @@ router.post("/entry", authenticateToken, async (req, res) => {
  * Do not forget to use the authenticateToken function when in production
  */
 router.patch("/exit", authenticateToken, async (req, res) => {
+    if (req.user.role?.toLowerCase() !== "admin" || req.user.role?.toLowerCase() === "security") {
+     return res.status(403).json({ message: "Forbidden" });
+   }
+
   const { plate } = req.body;
 
   if (!plate) {

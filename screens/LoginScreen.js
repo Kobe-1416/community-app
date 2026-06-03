@@ -86,7 +86,9 @@ export default function LoginScreen({ navigation }) {
 
       const meData = await meResp.json();
 
-      setIsAdmin(meData?.user?.role === "admin");
+      const userRole = meData?.user?.role?.toLowerCase();
+
+      setIsAdmin(userRole === "admin" || userRole === "security");
 
       navigation.replace("MainTabs");
 

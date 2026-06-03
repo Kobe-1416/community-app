@@ -1,13 +1,13 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ScrollView,
   View,
   Text,
   StyleSheet,
-  ActivityIndicator,
   Alert,
   TextInput,
   Pressable,
+  ActivityIndicator,
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
@@ -18,50 +18,49 @@ import { API_URL } from "../../config";
 export default function AdminScreen({ navigation }) {
   const { isDarkMode } = useTheme();
 
-  const [resettingGateCodes, setResettingGateCodes] = useState(false);
+  const [role, setRole] = useState(null);
+  const [loadingRole, setLoadingRole] = useState(true);
 
   const [gateCodeInput, setGateCodeInput] = useState("");
   const [checkingGateCode, setCheckingGateCode] = useState(false);
   const [gateCodeResult, setGateCodeResult] = useState(null);
 
-  const handleResetGateCodes = async () => {
-    if (resettingGateCodes) return;
+  const isSecurity = role?.toLowerCase() === "security";
 
-    try {
-      setResettingGateCodes(true);
+  useEffect(() => {
+    const fetchRole = async () => {
+      try {
+        const token = await SecureStore.getItemAsync("token");
 
-      const token = await SecureStore.getItemAsync("token");
+        if (!token) {
+          Alert.alert("Unauthorized", "No login token found. Please log in again.");
+          return;
+        }
 
-      if (!token) {
-        Alert.alert("Unauthorized", "No login token found. Please log in again.");
-        return;
+        const response = await fetch(`${API_URL}/api/auth/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          Alert.alert("Error", data.message || "Failed to load user role.");
+          return;
+        }
+
+        setRole(data.user?.role || "user");
+      } catch (error) {
+        console.error(error);
+        Alert.alert("Error", "Something went wrong while loading user role.");
+      } finally {
+        setLoadingRole(false);
       }
+    };
 
-      const response = await fetch(`${API_URL}/api/gate-codes/del`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        Alert.alert(
-          "Reset failed",
-          data.message || "Failed to reset gate codes."
-        );
-        return;
-      }
-
-      Alert.alert("Success", "Gate codes reset successfully.");
-    } catch (error) {
-      console.error(error);
-      Alert.alert("Error", "Something went wrong while resetting gate codes.");
-    } finally {
-      setResettingGateCodes(false);
-    }
-  };
+    fetchRole();
+  }, []);
 
   const handleCheckGateCode = async () => {
     const code = gateCodeInput.trim();
@@ -114,6 +113,22 @@ export default function AdminScreen({ navigation }) {
     }
   };
 
+  if (loadingRole) {
+    return (
+      <View
+        style={[
+          styles.loadingScreen,
+          isDarkMode && styles.darkScrollContainer,
+        ]}
+      >
+        <ActivityIndicator size="small" />
+        <Text style={[styles.loadingText, isDarkMode && styles.darkSubtitle]}>
+          Loading admin panel...
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView
       contentContainerStyle={[
@@ -122,35 +137,43 @@ export default function AdminScreen({ navigation }) {
       ]}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={[styles.title, isDarkMode && styles.darkText]}>Admin</Text>
+      <Text style={[styles.title, isDarkMode && styles.darkText]}>
+        {isSecurity ? "Security" : "Admin"}
+      </Text>
 
       <Text style={[styles.subtitle, isDarkMode && styles.darkSubtitle]}>
-        Manage visitors, announcements, and marketplace moderation.
+        {isSecurity
+          ? "Manage visitor access and verify gate codes."
+          : "Manage visitors, announcements, and marketplace moderation."}
       </Text>
 
-      <Text style={[styles.sectionTitle, isDarkMode && styles.darkText]}>
-        Controls
-      </Text>
+      {!isSecurity && (
+        <>
+          <Text style={[styles.sectionTitle, isDarkMode && styles.darkText]}>
+            Controls
+          </Text>
 
-      <View style={styles.cards}>
-        <PressableCard
-          title="Visitors"
-          notificationCount={0}
-          onPress={() => navigation.navigate("Admin Visitors")}
-        />
+          <View style={styles.cards}>
+            <PressableCard
+              title="Visitors"
+              notificationCount={0}
+              onPress={() => navigation.navigate("Admin Visitors")}
+            />
 
-        <PressableCard
-          title="Announcements"
-          notificationCount={0}
-          onPress={() => navigation.navigate("Admin Announcements")}
-        />
+            <PressableCard
+              title="Announcements"
+              notificationCount={0}
+              onPress={() => navigation.navigate("Admin Announcements")}
+            />
 
-        <PressableCard
-          title="Marketplace"
-          notificationCount={0}
-          onPress={() => navigation.navigate("Admin Marketplace")}
-        />
-      </View>
+            <PressableCard
+              title="Marketplace"
+              notificationCount={0}
+              onPress={() => navigation.navigate("Admin Marketplace")}
+            />
+          </View>
+        </>
+      )}
 
       <Text style={[styles.sectionTitle, isDarkMode && styles.darkText]}>
         Quick actions
@@ -164,10 +187,18 @@ export default function AdminScreen({ navigation }) {
         />
 
         <PressableCard
-          title="Post Announcement"
+          title="Remove Visitor"
           notificationCount={0}
-          onPress={() => navigation.navigate("Admin Create Announcement")}
+          onPress={() => navigation.navigate("Admin Visitors")}
         />
+
+        {!isSecurity && (
+          <PressableCard
+            title="Post Announcement"
+            notificationCount={0}
+            onPress={() => navigation.navigate("Admin Create Announcement")}
+          />
+        )}
       </View>
 
       <Text style={[styles.sectionTitle, isDarkMode && styles.darkText]}>
@@ -212,31 +243,6 @@ export default function AdminScreen({ navigation }) {
           <Text style={styles.errorText}>Gate code does not exist.</Text>
         )}
       </View>
-
-      <Text style={[styles.sectionTitle, isDarkMode && styles.darkText]}>
-        Reset gate codes
-      </Text>
-
-      <Text style={[styles.subtitle, isDarkMode && styles.darkSubtitle]}>
-        Delete all existing gate codes and unassign them from users.
-      </Text>
-
-      <View style={styles.cards}>
-        <PressableCard
-          title={resettingGateCodes ? "Resetting..." : "Reset Gate Codes"}
-          notificationCount={0}
-          onPress={handleResetGateCodes}
-        />
-      </View>
-
-      {resettingGateCodes && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" />
-          <Text style={[styles.loadingText, isDarkMode && styles.darkSubtitle]}>
-            Resetting gate codes...
-          </Text>
-        </View>
-      )}
     </ScrollView>
   );
 }
@@ -248,6 +254,12 @@ const styles = StyleSheet.create({
     padding: 10,
     paddingTop: 45,
     paddingBottom: 30,
+  },
+
+  loadingScreen: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   darkScrollContainer: {
@@ -345,13 +357,8 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  loadingContainer: {
-    marginTop: 10,
-    alignItems: "center",
-    gap: 8,
-  },
-
   loadingText: {
+    marginTop: 10,
     fontSize: 13,
     color: "#444",
   },
