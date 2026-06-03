@@ -8,6 +8,8 @@ import {
   TextInput,
   Pressable,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
@@ -130,130 +132,145 @@ export default function AdminScreen({ navigation }) {
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={[
-        styles.scrollContainer,
+    <KeyboardAvoidingView
+      style={[
+        styles.screen,
         isDarkMode && styles.darkScrollContainer,
       ]}
-      showsVerticalScrollIndicator={false}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 70 : 0}
     >
-      <Text style={[styles.title, isDarkMode && styles.darkText]}>
-        {isSecurity ? "Security" : "Admin"}
-      </Text>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContainer,
+          isDarkMode && styles.darkScrollContainer,
+        ]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={[styles.title, isDarkMode && styles.darkText]}>
+          {isSecurity ? "Security" : "Admin"}
+        </Text>
 
-      <Text style={[styles.subtitle, isDarkMode && styles.darkSubtitle]}>
-        {isSecurity
-          ? "Manage visitor access and verify gate codes."
-          : "Manage visitors, announcements, and marketplace moderation."}
-      </Text>
-
-      {!isSecurity && (
-        <>
-          <Text style={[styles.sectionTitle, isDarkMode && styles.darkText]}>
-            Controls
-          </Text>
-
-          <View style={styles.cards}>
-            <PressableCard
-              title="Visitors"
-              notificationCount={0}
-              onPress={() => navigation.navigate("Admin Visitors")}
-            />
-
-            <PressableCard
-              title="Announcements"
-              notificationCount={0}
-              onPress={() => navigation.navigate("Admin Announcements")}
-            />
-
-            <PressableCard
-              title="Marketplace"
-              notificationCount={0}
-              onPress={() => navigation.navigate("Admin Marketplace")}
-            />
-          </View>
-        </>
-      )}
-
-      <Text style={[styles.sectionTitle, isDarkMode && styles.darkText]}>
-        Quick actions
-      </Text>
-
-      <View style={styles.cards}>
-        <PressableCard
-          title="Add Visitor"
-          notificationCount={0}
-          onPress={() => navigation.navigate("Admin Add Visitor")}
-        />
-
-        <PressableCard
-          title="Remove Visitor"
-          notificationCount={0}
-          onPress={() => navigation.navigate("Admin Visitors")}
-        />
+        <Text style={[styles.subtitle, isDarkMode && styles.darkSubtitle]}>
+          {isSecurity
+            ? "Manage visitor access and verify gate codes."
+            : "Manage visitors, announcements, and marketplace moderation."}
+        </Text>
 
         {!isSecurity && (
+          <>
+            <Text style={[styles.sectionTitle, isDarkMode && styles.darkText]}>
+              Controls
+            </Text>
+
+            <View style={styles.cards}>
+              <PressableCard
+                title="Visitors"
+                notificationCount={0}
+                onPress={() => navigation.navigate("Admin Visitors")}
+              />
+
+              <PressableCard
+                title="Announcements"
+                notificationCount={0}
+                onPress={() => navigation.navigate("Admin Announcements")}
+              />
+
+              <PressableCard
+                title="Marketplace"
+                notificationCount={0}
+                onPress={() => navigation.navigate("Admin Marketplace")}
+              />
+            </View>
+          </>
+        )}
+
+        <Text style={[styles.sectionTitle, isDarkMode && styles.darkText]}>
+          Quick actions
+        </Text>
+
+        <View style={styles.cards}>
           <PressableCard
-            title="Post Announcement"
+            title="Add Visitor"
             notificationCount={0}
-            onPress={() => navigation.navigate("Admin Create Announcement")}
+            onPress={() => navigation.navigate("Admin Add Visitor")}
           />
-        )}
-      </View>
 
-      <Text style={[styles.sectionTitle, isDarkMode && styles.darkText]}>
-        Verify gate code
-      </Text>
+          <PressableCard
+            title="Remove Visitor"
+            notificationCount={0}
+            onPress={() => navigation.navigate("Admin Visitors")}
+          />
 
-      <Text style={[styles.subtitle, isDarkMode && styles.darkSubtitle]}>
-        Enter a gate code to check if it exists.
-      </Text>
+          {!isSecurity && (
+            <PressableCard
+              title="Post Announcement"
+              notificationCount={0}
+              onPress={() => navigation.navigate("Admin Create Announcement")}
+            />
+          )}
+        </View>
 
-      <View style={styles.verifyContainer}>
-        <TextInput
-          style={[styles.input, isDarkMode && styles.darkInput]}
-          placeholder="Enter gate code"
-          placeholderTextColor={isDarkMode ? "#888" : "#777"}
-          value={gateCodeInput}
-          onChangeText={(text) => {
-            setGateCodeInput(text);
-            setGateCodeResult(null);
-          }}
-          autoCapitalize="characters"
-        />
+        <Text style={[styles.sectionTitle, isDarkMode && styles.darkText]}>
+          Verify gate code
+        </Text>
 
-        <Pressable
-          style={[
-            styles.verifyButton,
-            checkingGateCode && styles.disabledButton,
-          ]}
-          onPress={handleCheckGateCode}
-          disabled={checkingGateCode}
-        >
-          <Text style={styles.verifyButtonText}>
-            {checkingGateCode ? "Checking..." : "Verify Code"}
-          </Text>
-        </Pressable>
+        <Text style={[styles.subtitle, isDarkMode && styles.darkSubtitle]}>
+          Enter a gate code to check if it exists.
+        </Text>
 
-        {gateCodeResult === "valid" && (
-          <Text style={styles.successText}>Gate code exists.</Text>
-        )}
+        <View style={styles.verifyContainer}>
+          <TextInput
+            style={[styles.input, isDarkMode && styles.darkInput]}
+            placeholder="Enter gate code"
+            placeholderTextColor={isDarkMode ? "#888" : "#777"}
+            value={gateCodeInput}
+            onChangeText={(text) => {
+              setGateCodeInput(text);
+              setGateCodeResult(null);
+            }}
+            autoCapitalize="characters"
+          />
 
-        {gateCodeResult === "invalid" && (
-          <Text style={styles.errorText}>Gate code does not exist.</Text>
-        )}
-      </View>
-    </ScrollView>
+          <Pressable
+            style={[
+              styles.verifyButton,
+              checkingGateCode && styles.disabledButton,
+            ]}
+            onPress={handleCheckGateCode}
+            disabled={checkingGateCode}
+          >
+            <Text style={styles.verifyButtonText}>
+              {checkingGateCode ? "Checking..." : "Verify Code"}
+            </Text>
+          </Pressable>
+
+          {gateCodeResult === "valid" && (
+            <Text style={styles.successText}>Gate code exists.</Text>
+          )}
+
+          {gateCodeResult === "invalid" && (
+            <Text style={styles.errorText}>Gate code does not exist.</Text>
+          )}
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+
   scrollContainer: {
     flexGrow: 1,
     alignItems: "center",
     padding: 10,
     paddingTop: 45,
-    paddingBottom: 30,
+    paddingBottom: 80,
   },
 
   loadingScreen: {

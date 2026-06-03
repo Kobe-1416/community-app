@@ -1,10 +1,12 @@
-import { 
-  View, 
-  StyleSheet, 
-  TextInput, 
+import {
+  View,
+  StyleSheet,
+  TextInput,
   ScrollView,
   ActivityIndicator,
   Animated,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import Button from "../components/Button";
 import Header from "../components/Header";
@@ -100,7 +102,6 @@ export default function RegisterScreen({ navigation }) {
 
       if (!data.success) {
         alert(data.message);
-        setLoading(false);
         return;
       }
 
@@ -119,7 +120,6 @@ export default function RegisterScreen({ navigation }) {
 
       if (!loginData.token) {
         alert("Login failed after registration");
-        setLoading(false);
         return;
       }
 
@@ -135,8 +135,20 @@ export default function RegisterScreen({ navigation }) {
   };
 
   return (
-    <View style={{ flex: 1 }}>
-      <ScrollView>
+    <KeyboardAvoidingView
+      style={[
+        styles.screen,
+        { backgroundColor: themeColors.background },
+      ]}
+      behavior="padding"
+      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+    >
+        <ScrollView
+          style={{ flex: 1 }}
+          keyboardShouldPersistTaps="always"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
         <Header title="CommunityApp" />
 
         <View style={styles.container}>
@@ -204,11 +216,19 @@ export default function RegisterScreen({ navigation }) {
           </Animated.Text>
         </View>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
+
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 35,
+  },
   container: {
     justifyContent: "center",
     alignItems: "center",
