@@ -14,6 +14,7 @@ import * as SecureStore from "expo-secure-store";
 import { colors } from "../styles/colors";
 import { useTheme } from "../context/ThemeContext";
 import React, { useState, useRef, useEffect } from "react";
+import { setupPushNotifications } from "../notifications/push";
 import { API_URL } from "../config";
 
 export default function RegisterScreen({ navigation }) {
@@ -126,6 +127,12 @@ export default function RegisterScreen({ navigation }) {
       await SecureStore.setItemAsync("token", loginData.token);
 
       navigation.replace("MainTabs");
+
+      setTimeout(() => {
+        setupPushNotifications().catch((err) =>
+          console.log("Push setup error:", err)
+        );
+      }, 1000);
     } catch (err) {
       console.error(err);
       alert("Something went wrong. Check server.");
