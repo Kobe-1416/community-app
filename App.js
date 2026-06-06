@@ -25,6 +25,7 @@ import AdminAddVisitorScreen from "./screens/Admin/AdminAddVisitorScreen";
 import AdminAnnouncementsScreen from "./screens/Admin/AdminAnnouncementsScreen";
 import AdminCreateAnnouncementScreen from "./screens/Admin/AdminCreateAnnouncementScreen";
 import AdminMarketplaceScreen from "./screens/Admin/AdminMarketplaceScreen";
+import AdminPaymentProofsScreen from "./screens/Admin/AdminPaymentsProofsScreen";
 
 const Stack = createNativeStackNavigator();
 const AdminStack = createNativeStackNavigator();
@@ -147,6 +148,10 @@ function AdminStackScreen() {
       <AdminStack.Screen name="Admin Marketplace" component={AdminMarketplaceScreen} />
       <AdminStack.Screen name="Admin Add Visitor" component={AdminAddVisitorScreen} />
       <AdminStack.Screen name="Admin Create Announcement" component={AdminCreateAnnouncementScreen} />
+      <Stack.Screen
+        name="Admin Payment Proofs"
+        component={AdminPaymentProofsScreen}
+      />
     </AdminStack.Navigator>
   );
 }

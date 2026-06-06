@@ -254,6 +254,26 @@ export default function AdminScreen({ navigation }) {
             <Text style={styles.errorText}>Gate code does not exist.</Text>
           )}
         </View>
+
+        {!isSecurity && (
+          <>
+            <Text style={[styles.sectionTitle, isDarkMode && styles.darkText]}>
+              Payments
+            </Text>
+
+            <Text style={[styles.subtitle, isDarkMode && styles.darkSubtitle]}>
+              Review uploaded proof of payment documents and verify resident payments.
+            </Text>
+
+            <View style={styles.cards}>
+              <PressableCard
+                title="Verify Payments"
+                notificationCount={0}
+                onPress={() => navigation.navigate("Admin Payment Proofs")}
+              />
+            </View>
+          </>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );

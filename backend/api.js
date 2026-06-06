@@ -10,6 +10,7 @@ const dashboardRouter = require("./dashboard");
 const marketplaceRouter = require("./marketplace"); 
 const notificationsRouter = require("./notifications");
 const uploadRouter = require("./upload");
+const paymentsRouter = require("./payments");
 
 router.use("/upload", uploadRouter);
 router.use("/auth", authRouter);
@@ -19,5 +20,6 @@ router.use("/announcements", announcementsRouter);
 router.use("/market", marketplaceRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/", dashboardRouter);
+router.use("/payments", paymentsRouter);
 
 module.exports = router;
