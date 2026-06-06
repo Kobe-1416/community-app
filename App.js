@@ -19,6 +19,7 @@ import MarketPlaceScreen from "./screens/MarketPlaceScreen";
 import ListingDetailsScreen from "./screens/ListingDetailsScreen";
 import SettingsScreen from "./screens/SettingsScreen";
 import CreateListingScreen from "./screens/CreateListingScreen";
+import PaymentsScreen from "./screens/PaymentsScreen";
 import AdminScreen from "./screens/Admin/AdminScreen";
 import AdminVisitorsScreen from "./screens/Admin/AdminVisitorsScreen";
 import AdminAddVisitorScreen from "./screens/Admin/AdminAddVisitorScreen";
@@ -93,6 +94,15 @@ function MainTabs() {
           options={{ title: "Market Place" }}
         />
         <Tab.Screen name="Settings" component={SettingsScreen} />
+        <Tab.Screen
+          name="Payments"
+          component={PaymentsScreen}
+          options={{
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="card-outline" size={size} color={color} />
+            ),
+          }}
+        />
         {isAdmin && (
         <Tab.Screen name="Admin" component={AdminStackScreen} />
         )}
