@@ -26,7 +26,7 @@ import AdminAddVisitorScreen from "./screens/Admin/AdminAddVisitorScreen";
 import AdminAnnouncementsScreen from "./screens/Admin/AdminAnnouncementsScreen";
 import AdminCreateAnnouncementScreen from "./screens/Admin/AdminCreateAnnouncementScreen";
 import AdminMarketplaceScreen from "./screens/Admin/AdminMarketplaceScreen";
-import AdminPaymentProofsScreen from "./screens/Admin/AdminPaymentsProofsScreen";
+import AdminPaymentProofsScreen from "./screens/Admin/AdminPaymentProofsScreen";
 
 const Stack = createNativeStackNavigator();
 const AdminStack = createNativeStackNavigator();
