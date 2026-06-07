@@ -1,10 +1,14 @@
+// payments.js
 const express = require("express");
 const router = express.Router();
 
 const multer = require("multer");
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const cloudinary = require("cloudinary").v2;
 const ExcelJS = require("exceljs");
+
+const fs = require("fs");
+const path = require("path");
+const { spawn } = require("child_process");
 
 const pool = require("./db");
 const authenticateToken = require("./middleware/auth");
@@ -19,15 +23,19 @@ cloudinary.config({
 });
 
 // -------------------------
-// Upload storage
+// Local temp upload storage
 // -------------------------
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: async (req, file) => ({
-    folder: "payment_proofs",
-    resource_type: "auto",
-    allowed_formats: ["jpg", "jpeg", "png", "webp", "pdf"],
-  }),
+const uploadDir = path.join(__dirname, "tmp", "payment_uploads");
+fs.mkdirSync(uploadDir, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
+    cb(null, `${Date.now()}-${safeName}`);
+  },
 });
 
 const upload = multer({
@@ -51,8 +59,80 @@ const upload = multer({
   },
 });
 
+// -------------------------
+// Helpers
+// -------------------------
 function isAdmin(req) {
   return req.user?.role?.toLowerCase() === "admin";
+}
+
+function getPythonCommand() {
+  return process.env.PYTHON_BIN || (process.platform === "win32" ? "python" : "python3");
+}
+
+function safeDelete(filePath) {
+  if (!filePath) return;
+
+  fs.unlink(filePath, (err) => {
+    if (err) {
+      console.warn("Failed to delete temp file:", filePath, err.message);
+    }
+  });
+}
+
+function resolvePreviewPath(previewPath) {
+  if (!previewPath) return null;
+
+  if (path.isAbsolute(previewPath)) {
+    return previewPath;
+  }
+
+  return path.join(__dirname, previewPath);
+}
+
+function processPaymentProof(localFilePath) {
+  return new Promise((resolve, reject) => {
+    const scriptPath = path.join(
+      __dirname,
+      "scripts",
+      "process_payment_proof.py"
+    );
+
+    if (!fs.existsSync(scriptPath)) {
+      console.warn("Python script not found:", scriptPath);
+      return resolve({});
+    }
+
+    const python = spawn(getPythonCommand(), [scriptPath, localFilePath], {
+      cwd: __dirname,
+    });
+
+    let stdout = "";
+    let stderr = "";
+
+    python.stdout.on("data", (data) => {
+      stdout += data.toString();
+    });
+
+    python.stderr.on("data", (data) => {
+      stderr += data.toString();
+    });
+
+    python.on("close", (code) => {
+      if (code !== 0) {
+        return reject(
+          new Error(`Python script failed with code ${code}: ${stderr}`)
+        );
+      }
+
+      try {
+        const parsed = stdout.trim() ? JSON.parse(stdout) : {};
+        resolve(parsed);
+      } catch (err) {
+        reject(new Error(`Invalid Python JSON output: ${stdout}`));
+      }
+    });
+  });
 }
 
 /* =========================
@@ -64,6 +144,9 @@ router.post(
   authenticateToken,
   upload.single("proof"),
   async (req, res) => {
+    let localFilePath = null;
+    let previewPath = null;
+
     try {
       const userId = req.user.dbUserId;
 
@@ -74,31 +157,97 @@ router.post(
         });
       }
 
+      localFilePath = req.file.path;
+
+      // 1. Process local file with Python
+      let extraction = {};
+
+      try {
+        extraction = await processPaymentProof(localFilePath);
+      } catch (err) {
+        console.error("Python extraction failed:", err.message);
+        extraction = {};
+      }
+
+      // 2. Upload original file to Cloudinary
+      const originalUpload = await cloudinary.uploader.upload(localFilePath, {
+        folder: "payment_proofs",
+        resource_type: "auto",
+      });
+
+      const originalFileUrl = originalUpload.secure_url;
+
+      // 3. Upload preview image if Python created one
+      const rawPreviewPath =
+        extraction.preview_image_path ||
+        extraction.previewImagePath ||
+        extraction.preview_page_path ||
+        extraction.previewPagePath ||
+        null;
+
+      previewPath = resolvePreviewPath(rawPreviewPath);
+
+      let previewImageUrl = null;
+
+      if (previewPath && fs.existsSync(previewPath)) {
+        const previewUpload = await cloudinary.uploader.upload(previewPath, {
+          folder: "payment_proofs/previews",
+          resource_type: "image",
+        });
+
+        previewImageUrl = previewUpload.secure_url;
+      } else if (req.file.mimetype.startsWith("image/")) {
+        // For image uploads, use the original image as preview.
+        previewImageUrl = originalFileUrl;
+      }
+
+      // 4. Save payment proof row
       const result = await pool.query(
         `
         INSERT INTO payment_proofs (
           user_id,
           original_file_url,
+          preview_image_url,
+          raw_extracted_text,
+          possible_amount_text,
+          possible_reference_text,
+          possible_date_text,
           status,
           created_at
         )
-        VALUES ($1, $2, 'pending', NOW())
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', NOW())
         RETURNING *
         `,
-        [userId, req.file.path]
+        [
+          userId,
+          originalFileUrl,
+          previewImageUrl,
+          extraction.raw_extracted_text || extraction.rawText || "",
+          extraction.possible_amount_text || extraction.possibleAmountText || "",
+          extraction.possible_reference_text || extraction.possibleReferenceText || "",
+          extraction.possible_date_text || extraction.possibleDateText || "",
+        ]
       );
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         message: "Proof of payment uploaded",
         payment: result.rows[0],
       });
     } catch (err) {
-      console.error("Upload proof error:", err);
-      res.status(500).json({
-        success: false,
-        message: "Failed to upload proof of payment",
+      console.error("Upload proof error:", {
+        message: err.message,
+        code: err.code,
+        detail: err.detail,
       });
+
+      return res.status(500).json({
+        success: false,
+        message: err.message || "Failed to upload proof of payment",
+      });
+    } finally {
+      safeDelete(localFilePath);
+      safeDelete(previewPath);
     }
   }
 );
@@ -141,13 +290,18 @@ router.get("/", authenticateToken, async (req, res) => {
       );
     }
 
-    res.json({
+    return res.json({
       success: true,
       payments: result.rows,
     });
   } catch (err) {
-    console.error("Get payments error:", err);
-    res.status(500).json({
+    console.error("Get payments error:", {
+      message: err.message,
+      code: err.code,
+      detail: err.detail,
+    });
+
+    return res.status(500).json({
       success: false,
       message: "Failed to fetch payments",
     });
@@ -171,17 +325,15 @@ router.get("/totals", authenticateToken, async (req, res) => {
       `
       SELECT
         COUNT(*) AS total_count,
-
         COUNT(*) FILTER (WHERE status = 'pending') AS pending_count,
         COUNT(*) FILTER (WHERE status = 'verified') AS verified_count,
         COUNT(*) FILTER (WHERE status = 'rejected') AS rejected_count,
-
         COALESCE(SUM(confirmed_amount) FILTER (WHERE status = 'verified'), 0) AS verified_total
       FROM payment_proofs
       `
     );
 
-    res.json({
+    return res.json({
       success: true,
       totals: {
         totalCount: Number(result.rows[0].total_count),
@@ -192,8 +344,13 @@ router.get("/totals", authenticateToken, async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Get payment totals error:", err);
-    res.status(500).json({
+    console.error("Get payment totals error:", {
+      message: err.message,
+      code: err.code,
+      detail: err.detail,
+    });
+
+    return res.status(500).json({
       success: false,
       message: "Failed to fetch payment totals",
     });
@@ -216,11 +373,7 @@ router.patch("/:id/verify", authenticateToken, async (req, res) => {
     const { id } = req.params;
     const adminId = req.user.dbUserId;
 
-    const {
-      amount,
-      reference,
-      paymentDate,
-    } = req.body;
+    const { amount, reference, paymentDate } = req.body;
 
     if (!amount || !reference || !paymentDate) {
       return res.status(400).json({
@@ -252,14 +405,19 @@ router.patch("/:id/verify", authenticateToken, async (req, res) => {
       });
     }
 
-    res.json({
+    return res.json({
       success: true,
       message: "Payment verified",
       payment: result.rows[0],
     });
   } catch (err) {
-    console.error("Verify payment error:", err);
-    res.status(500).json({
+    console.error("Verify payment error:", {
+      message: err.message,
+      code: err.code,
+      detail: err.detail,
+    });
+
+    return res.status(500).json({
       success: false,
       message: "Failed to verify payment",
     });
@@ -304,14 +462,19 @@ router.patch("/:id/reject", authenticateToken, async (req, res) => {
       });
     }
 
-    res.json({
+    return res.json({
       success: true,
       message: "Payment rejected",
       payment: result.rows[0],
     });
   } catch (err) {
-    console.error("Reject payment error:", err);
-    res.status(500).json({
+    console.error("Reject payment error:", {
+      message: err.message,
+      code: err.code,
+      detail: err.detail,
+    });
+
+    return res.status(500).json({
       success: false,
       message: "Failed to reject payment",
     });
@@ -390,10 +553,15 @@ router.get("/export", authenticateToken, async (req, res) => {
     );
 
     await workbook.xlsx.write(res);
-    res.end();
+    return res.end();
   } catch (err) {
-    console.error("Export payments error:", err);
-    res.status(500).json({
+    console.error("Export payments error:", {
+      message: err.message,
+      code: err.code,
+      detail: err.detail,
+    });
+
+    return res.status(500).json({
       success: false,
       message: "Failed to export payments",
     });
