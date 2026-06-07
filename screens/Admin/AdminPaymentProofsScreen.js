@@ -409,13 +409,13 @@ export default function AdminPaymentProofsScreen() {
               Extracted text
             </Text>
 
-            <Text style={[styles.extractedText, { color: theme.muted }]}>
+            {/* <Text style={[styles.extractedText, { color: theme.muted }]}>
               {selectedPayment.raw_extracted_text ||
                 selectedPayment.possible_amount_text ||
                 selectedPayment.possible_reference_text ||
                 selectedPayment.possible_date_text ||
                 "No extracted text yet. This will show once Python extraction is added."}
-            </Text>
+            </Text> */}
 
             {!!selectedPayment.possible_amount_text && (
               <Text style={[styles.extractedText, { color: theme.muted }]}>
