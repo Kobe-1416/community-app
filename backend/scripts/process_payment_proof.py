@@ -13,87 +13,117 @@ def get_lines(text):
     return [clean_line(line) for line in text.splitlines() if clean_line(line)]
 
 
-def nearby_lines(lines, index, before=0, after=3):
-    start = max(0, index - before)
-    end = min(len(lines), index + after + 1)
-    return " | ".join(lines[start:end])
+def detect_bank(raw_text):
+    lower = raw_text.lower()
+
+    if "first national bank" in lower or "fnb" in lower:
+        return "FNB"
+    if "absa" in lower:
+        return "ABSA"
+    if "tymebank" in lower or "tyme bank" in lower:
+        return "TymeBank"
+    if "capitec" in lower:
+        return "Capitec"
+    if "nedbank" in lower:
+        return "Nedbank"
+    if "standard bank" in lower:
+        return "Standard Bank"
+
+    return "Unknown"
 
 
-def find_line_index(lines, keywords):
+def value_from_label(lines, labels, max_lookahead=3):
+    labels_lower = [label.lower() for label in labels]
+
     for i, line in enumerate(lines):
         lower = line.lower()
-        if any(keyword in lower for keyword in keywords):
-            return i
-    return -1
 
+        for label in labels_lower:
+            if label in lower:
+                # Case 1: "Payment date: 2026-05-27"
+                if ":" in line:
+                    after_colon = line.split(":", 1)[1].strip()
+                    if after_colon:
+                        return f"{line}"
 
-def find_amount(lines, raw_text):
-    # Strong direct patterns first: ZAR30.00, ZAR 30.00, R850.00, R 850.00
-    amount_patterns = [
-        r"\bZAR\s?[\d,]+(?:\.\d{2})?\b",
-        r"\bR\s?[\d,]+(?:\.\d{2})?\b",
-    ]
+                # Case 2: label on one line, value on next line
+                for j in range(i + 1, min(len(lines), i + 1 + max_lookahead)):
+                    candidate = lines[j].strip()
+                    if candidate:
+                        return f"{line} | {candidate}"
 
-    for pattern in amount_patterns:
-        match = re.search(pattern, raw_text, re.IGNORECASE)
-        if match:
-            return match.group(0)
-
-    # Label-based fallback
-    amount_keywords = [
-        "cur/amount",
-        "amount",
-        "amount paid",
-        "payment amount",
-        "total amount",
-        "paid amount",
-        "transaction amount",
-    ]
-
-    index = find_line_index(lines, amount_keywords)
-
-    if index != -1:
-        return nearby_lines(lines, index, after=2)
+                return line
 
     return ""
 
 
-def find_reference(lines):
-    reference_keywords = [
-        "reference",
+def extract_amount(lines, raw_text):
+    amount_labels = [
+        "cur/amount",
+        "for the amount of",
+        "payment amount",
+        "amount paid",
+        "paid amount",
+        "transaction amount",
+        "amount",
+    ]
+
+    section = value_from_label(lines, amount_labels, max_lookahead=3)
+
+    # Try extract amount from the section first
+    amount_patterns = [
+        r"\bZAR\s?[\d,]+(?:\.\d{2})?\b",
+        r"\bR\s?[\d,]+(?:\.\d{2})?\b",
+        r"\b[\d,]+\.\d{2}\b",
+    ]
+
+    for pattern in amount_patterns:
+        match = re.search(pattern, section, re.IGNORECASE)
+        if match:
+            return match.group(0)
+
+    # Fallback: currency anywhere in document
+    for pattern in [
+        r"\bZAR\s?[\d,]+(?:\.\d{2})?\b",
+        r"\bR\s?[\d,]+(?:\.\d{2})?\b",
+    ]:
+        match = re.search(pattern, raw_text, re.IGNORECASE)
+        if match:
+            return match.group(0)
+
+    return section
+
+
+def extract_reference(lines):
+    reference_labels = [
+        "reference on beneficiary statement",
         "payment reference",
         "beneficiary reference",
         "recipient reference",
         "statement reference",
         "my reference",
         "your reference",
+        "reference",
         "ref",
     ]
 
-    index = find_line_index(lines, reference_keywords)
-
-    if index == -1:
-        return ""
-
-    return nearby_lines(lines, index, after=2)
+    return value_from_label(lines, reference_labels, max_lookahead=3)
 
 
-def find_date(lines, raw_text):
-    date_keywords = [
+def extract_date(lines, raw_text):
+    date_labels = [
         "date actioned",
+        "payment date and time",
         "payment date",
         "transaction date",
         "effective date",
+        "value date",
         "date paid",
         "date",
     ]
 
-    index = find_line_index(lines, date_keywords)
+    section = value_from_label(lines, date_labels, max_lookahead=3)
 
-    if index != -1:
-        return nearby_lines(lines, index, after=2)
-
-    # Fallback date formats
     date_patterns = [
         r"\b\d{4}/\d{2}/\d{2}\b",
         r"\b\d{4}-\d{2}-\d{2}\b",
@@ -102,35 +132,36 @@ def find_date(lines, raw_text):
     ]
 
     for pattern in date_patterns:
+        match = re.search(pattern, section)
+        if match:
+            return match.group(0)
+
+    for pattern in date_patterns:
         match = re.search(pattern, raw_text)
         if match:
             return match.group(0)
 
-    return ""
+    return section
 
 
-def detect_bank(raw_text):
-    lower = raw_text.lower()
+def extract_recipient(lines):
+    recipient_labels = [
+        "payment made to",
+        "recipient",
+        "recipient name",
+        "beneficiary name",
+        "beneficiary",
+        "payee",
+        "name",
+    ]
 
-    if "first national bank" in lower or "fnb" in lower:
-        return "FNB"
-    if "capitec" in lower:
-        return "Capitec"
-    if "standard bank" in lower:
-        return "Standard Bank"
-    if "nedbank" in lower:
-        return "Nedbank"
-    if "absa" in lower:
-        return "ABSA"
-
-    return "Unknown"
+    return value_from_label(lines, recipient_labels, max_lookahead=3)
 
 
 def process_pdf(file_path):
     doc = fitz.open(file_path)
 
     raw_text_parts = []
-
     for page in doc:
         raw_text_parts.append(page.get_text("text"))
 
@@ -151,18 +182,13 @@ def process_pdf(file_path):
 
     doc.close()
 
-    detected_bank = detect_bank(raw_text)
-
-    possible_amount = find_amount(lines, raw_text)
-    possible_reference = find_reference(lines)
-    possible_date = find_date(lines, raw_text)
-
     return {
-        "detected_bank": detected_bank,
+        "detected_bank": detect_bank(raw_text),
         "raw_extracted_text": raw_text,
-        "possible_amount_text": possible_amount,
-        "possible_reference_text": possible_reference,
-        "possible_date_text": possible_date,
+        "possible_amount_text": extract_amount(lines, raw_text),
+        "possible_reference_text": extract_reference(lines),
+        "possible_date_text": extract_date(lines, raw_text),
+        "possible_recipient_text": extract_recipient(lines),
         "preview_image_path": preview_path,
     }
 
@@ -178,9 +204,7 @@ def main():
         print(json.dumps({"error": "File does not exist"}))
         return
 
-    lower = file_path.lower()
-
-    if lower.endswith(".pdf"):
+    if file_path.lower().endswith(".pdf"):
         result = process_pdf(file_path)
     else:
         result = {
@@ -189,6 +213,7 @@ def main():
             "possible_amount_text": "",
             "possible_reference_text": "",
             "possible_date_text": "",
+            "possible_recipient_text": "",
             "preview_image_path": "",
         }
 
