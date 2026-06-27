@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { API_URL } from "../config";
+import { API_URL, getItem } from "../config";
 import {
   View,
   StyleSheet,
@@ -10,7 +10,6 @@ import {
   TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import * as SecureStore from "expo-secure-store";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../context/ThemeContext";
 
@@ -51,7 +50,7 @@ export default function MarketPlaceScreen({ navigation }) {
     setLoading(true);
 
     try {
-      const token = await SecureStore.getItemAsync("token");
+      const token = await getItem("token");
 
       if (!token) {
         console.log("No token found for marketplace request");

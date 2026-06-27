@@ -13,6 +13,7 @@ app.use(cors({
     "http://localhost:8081",
     "http://10.162.147.147:8081",
     "https://community-app-ccmd.onrender.com",
+    "https://community-app-v10.vercel.app",
   ],
   credentials: true,
 }));

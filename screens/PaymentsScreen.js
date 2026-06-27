@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { API_URL } from "../config";
+import { API_URL, getItem } from "../config";
 import {
   View,
   StyleSheet,
@@ -14,7 +14,6 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import * as SecureStore from "expo-secure-store";
 import * as DocumentPicker from "expo-document-picker";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../context/ThemeContext";
@@ -130,7 +129,7 @@ export default function PaymentsScreen({ navigation }) {
   const fetchPayments = async () => {
     setLoading(true);
     try {
-      const token = await SecureStore.getItemAsync("token");
+      const token = await getItem("token");
       if (!token) {
         Alert.alert("Unauthorized", "Please log in again.");
         setPayments([]);
@@ -203,7 +202,7 @@ export default function PaymentsScreen({ navigation }) {
 
     setUploading(true);
     try {
-      const token = await SecureStore.getItemAsync("token");
+      const token = await getItem("token");
       if (!token) {
         Alert.alert("Unauthorized", "Please log in again.");
         return;

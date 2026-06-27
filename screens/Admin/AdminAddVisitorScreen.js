@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { View, TextInput, Alert, StyleSheet } from "react-native";
 import Button from "../../components/Button";
-import * as SecureStore from "expo-secure-store";
-import { API_URL } from "../../config";
+import { API_URL, getItem } from "../../config";
 import { useTheme } from "../../context/ThemeContext";
 import { colors } from "../../styles/colors";
 
@@ -108,7 +107,7 @@ export default function AdminAddVisitorScreen({ navigation }) {
     setLoading(true);
 
     try {
-      const token = await SecureStore.getItemAsync("token");
+      const token = await getItem("token");
       if (!token) return Alert.alert("Error", "Not logged in");
 
       const resp = await fetch(ADD_VISITOR_ENDPOINT, {

@@ -5,10 +5,9 @@ import ContributionsBar from "../components/ContributionBar";
 import Card from "../components/Card";
 import PressableCard from "../components/PressableCard";
 import { ScrollView, RefreshControl, View, Text, StyleSheet, Pressable, Alert } from "react-native";
-import * as SecureStore from "expo-secure-store";
 import { useTheme } from "../context/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { API_URL } from '../config';
+import { API_URL, getItem } from "../config";
 
 const BASE_URL = `${API_URL}`;
 const DASHBOARD_ENDPOINT = `${BASE_URL}/api/dashboard`;
@@ -32,12 +31,10 @@ export default function HomeScreen({ navigation }) {
   const [showVisitorsTotal, setshowVisitorsTotal] = useState(false);
   const [showVisitors, setShowVisitors] = useState(false);
 
-  // Load cached dashboard first, then refresh from server
   useEffect(() => {
     let mounted = true;
 
     const init = async () => {
-      // 1) load cache
       try {
         const cached = await AsyncStorage.getItem(DASHBOARD_CACHE_KEY);
         if (cached && mounted) {
@@ -47,9 +44,7 @@ export default function HomeScreen({ navigation }) {
         console.warn("Failed to read dashboard cache", err);
       }
 
-      // 2) fetch fresh data
       await fetchDashboard();
-      // fetch the date of expiry of the gate code or fix the backend payload to include it
     };
 
     init();
@@ -59,47 +54,38 @@ export default function HomeScreen({ navigation }) {
     };
   }, []);
 
-  // pull refresh handler
   const fetchData = async () => {
     setLoading(true);
-
-    try{
+    try {
       await fetchDashboard();
-    }
-    catch(err){
+    } catch (err) {
       console.error("Error refreshing", err);
       Alert.alert("Error", "Failed to refresh data. Please try again.");
-    }
-    finally{
+    } finally {
       setLoading(false);
     }
-  }
+  };
 
-  // fetch dashboard from backend
   const fetchDashboard = async () => {
     try {
-      const token = await SecureStore.getItemAsync("token");
-      if (!token) {
-        // Not authenticated
-        Alert.alert("Not authenticated", "Please login again.");
+      const token = await getItem("token");
 
+      if (!token) {
+        Alert.alert("Not authenticated", "Please login again.");
         return;
       }
 
       const resp = await fetch(DASHBOARD_ENDPOINT, {
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${token}`,
-          "Accept": "application/json",
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
         },
       });
 
       if (!resp.ok) {
-        // handle 401/403/others gracefully
         if (resp.status === 401) {
           Alert.alert("Session expired", "Please log in again.");
-          // optionally navigate to login
-          // navigation.replace("Login");
         } else {
           console.warn("Failed to fetch dashboard", resp.status);
         }
@@ -108,12 +94,10 @@ export default function HomeScreen({ navigation }) {
 
       const data = await resp.json();
 
-      
-
       const mapped = {
         gateCode: data.gateCode || null,
         weekEnd: data.weekEnd || null,
-        role: data.role || "user", // ✅ ADD THIS
+        role: data.role || "user",
         contributions: {
           current: data.contributions?.current ?? 0,
           total: data.contributions?.total ?? 1,
@@ -127,7 +111,6 @@ export default function HomeScreen({ navigation }) {
 
       setDashboard(mapped);
 
-      // cache for offline use
       try {
         await AsyncStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify(mapped));
       } catch (err) {
@@ -135,13 +118,12 @@ export default function HomeScreen({ navigation }) {
       }
     } catch (err) {
       console.error("Network error fetching dashboard", err);
-      // keep cached data if any
     }
   };
 
   const generateGateCodes = async () => {
     try {
-      const token = await SecureStore.getItemAsync("token");
+      const token = await getItem("token");
 
       if (!token) {
         Alert.alert("Error", "Not authenticated");
@@ -151,28 +133,23 @@ export default function HomeScreen({ navigation }) {
       const resp = await fetch(`${BASE_URL}/api/gate-codes/generate`, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
-      console.log("Generate codes response:", resp);
 
       if (!resp.ok) {
         throw new Error("Failed to generate codes");
       }
 
       Alert.alert("Success", "New gate codes generated");
-
-      // refresh dashboard so new code shows
       await fetchDashboard();
-
     } catch (err) {
       console.error(err);
       Alert.alert("Error", "Could not generate codes");
     }
   };
 
-  // destructure dashboard for easy use in JSX
   const {
     gateCode,
     weekEnd,
@@ -185,8 +162,8 @@ export default function HomeScreen({ navigation }) {
   } = dashboard;
 
   const formattedWeekEnd = weekEnd
-  ? new Date(weekEnd).toISOString().split("T")[0]
-  : "—";
+    ? new Date(weekEnd).toISOString().split("T")[0]
+    : "—";
 
   return (
     <ScrollView
@@ -201,43 +178,48 @@ export default function HomeScreen({ navigation }) {
     >
       <CodeCard
         largeText={gateCode ? gateCode : "—"}
-        smallText={gateCode ? `expires: ${formattedWeekEnd}` : "no code available"}
+        smallText={
+          gateCode ? `expires: ${formattedWeekEnd}` : "no code available"
+        }
       />
 
       {dashboard.role === "admin" && (
-          <Pressable
-            style={{
-              marginTop: 10,
-              marginBottom: 10,
-              backgroundColor: "#85FF27",
-              padding: 12,
-              borderRadius: 20,
-              borderWidth: 1,
-              borderColor: "#c7c7c7",
-              width: "70%"
-            }}
-            onPress={() =>
-              Alert.alert(
-                "Generate Codes",
-                "This will replace all current gate codes. Continue?",
-                [
-                  { text: "Cancel", style: "cancel" },
-                  { text: "Yes", onPress: generateGateCodes },
-                ]
-              )
-            }
-          >
-            <Text style={{ color: "#333", textAlign: "center", fontWeight: "600" }}>
-              Generate New Gate Codes
-            </Text>
-          </Pressable>
-        )}
+        <Pressable
+          style={{
+            marginTop: 10,
+            marginBottom: 10,
+            backgroundColor: "#85FF27",
+            padding: 12,
+            borderRadius: 20,
+            borderWidth: 1,
+            borderColor: "#c7c7c7",
+            width: "70%",
+          }}
+          onPress={() =>
+            Alert.alert(
+              "Generate Codes",
+              "This will replace all current gate codes. Continue?",
+              [
+                { text: "Cancel", style: "cancel" },
+                { text: "Yes", onPress: generateGateCodes },
+              ]
+            )
+          }
+        >
+          <Text style={{ color: "#333", textAlign: "center", fontWeight: "600" }}>
+            Generate New Gate Codes
+          </Text>
+        </Pressable>
+      )}
 
       <Text style={[styles.subtitle, isDarkMode && styles.darkSubtitle]}>
         Give the guard the code to exit and enter the community.
       </Text>
 
-      <ContributionsBar current={contributions.current} total={contributions.total} />
+      <ContributionsBar
+        current={contributions.current}
+        total={contributions.total}
+      />
 
       <Text style={styles.visitor}>Today</Text>
 
@@ -264,7 +246,7 @@ export default function HomeScreen({ navigation }) {
       {showVisitors && (
         <View style={styles.visitorList}>
           {visitorsList
-            .filter((v) => !v.exit_time) // items still inside
+            .filter((v) => !v.exit_time)
             .map((visitor) => (
               <View key={visitor.id} style={styles.visitorItem}>
                 <Text style={styles.visitorName}>{visitor.name ?? "Unknown"}</Text>
@@ -298,7 +280,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 10,
     paddingTop: 45,
-    paddingBottom: 30, // Add bottom padding
+    paddingBottom: 30,
   },
   visitor: {
     marginTop: 40,

@@ -12,8 +12,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
 import * as ImagePicker from "expo-image-picker";
-import * as SecureStore from "expo-secure-store";
-import { API_URL } from '../config';
+import { API_URL, getItem } from '../config';
 
 export default function CreateListingScreen({ navigation, route }) {
   const { isDarkMode } = useTheme();
@@ -44,7 +43,7 @@ export default function CreateListingScreen({ navigation, route }) {
       setLoading(true);
 
       // --- GET TOKEN ---
-      const token = await SecureStore.getItemAsync("token");
+      const token = await getItem("token");
       console.log("Token:", token);
 
       if (!token) {
@@ -202,7 +201,7 @@ export default function CreateListingScreen({ navigation, route }) {
     if (!result.canceled) {
       const selectedImage = result.assets[0].uri;
 
-      // TEMP: store local URI (we’ll upload later)
+      // TEMP: store local URI (we'll upload later)
       setImages([...images, selectedImage]);
     }
   };
@@ -411,7 +410,6 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   addImageButtonDark: {
-    // keep the same dashed green border; just ensure the empty tile doesn’t look “light”
     backgroundColor: "transparent",
   },
 
@@ -447,7 +445,7 @@ const styles = StyleSheet.create({
     width: 30,
   },
 
-  priceInput: { flex: 1, marginBottom: 0 }, // prevents double spacing inside the row
+  priceInput: { flex: 1, marginBottom: 0 },
 
   textArea: { height: 120, textAlignVertical: "top" },
 

@@ -11,11 +11,10 @@ import {
   TouchableOpacity
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
-import * as SecureStore from "expo-secure-store";
 import { useTheme } from "../context/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getExpoPushToken, registerDeviceTokenWithServer, syncPushSettingsToServer } from "../notifications/push";
-import { API_URL } from '../config';
+import { API_URL, getItem } from '../config';
 
 export default function SettingsScreen({ navigation }) {
   const { isDarkMode, setIsDarkMode } = useTheme();
@@ -37,7 +36,7 @@ export default function SettingsScreen({ navigation }) {
 
   useEffect(() => {
     const loadToken = async () => {
-      const storedToken = await SecureStore.getItemAsync('token');
+      const storedToken = await getItem('token');
       setToken(storedToken);
     };
     loadToken();

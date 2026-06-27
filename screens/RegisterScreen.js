@@ -10,12 +10,10 @@ import {
 } from "react-native";
 import Button from "../components/Button";
 import Header from "../components/Header";
-import * as SecureStore from "expo-secure-store";
 import { colors } from "../styles/colors";
 import { useTheme } from "../context/ThemeContext";
 import React, { useState, useRef, useEffect } from "react";
-import { setupPushNotifications } from "../notifications/push";
-import { API_URL } from "../config";
+import { API_URL, saveItem } from "../config";
 
 export default function RegisterScreen({ navigation }) {
   const [surname, setSurname] = useState("");
@@ -87,9 +85,7 @@ export default function RegisterScreen({ navigation }) {
     try {
       const response = await fetch(`${API_URL}/api/auth/register`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           surname,
           house_number: houseNumber,
@@ -108,13 +104,8 @@ export default function RegisterScreen({ navigation }) {
 
       const loginResp = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          phone,
-          password,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, password }),
       });
 
       const loginData = await loginResp.json();
@@ -124,15 +115,22 @@ export default function RegisterScreen({ navigation }) {
         return;
       }
 
-      await SecureStore.setItemAsync("token", loginData.token);
+      // Works on both native (SecureStore) and web (localStorage)
+      await saveItem("token", loginData.token);
 
       navigation.replace("MainTabs");
 
-      setTimeout(() => {
-        setupPushNotifications().catch((err) =>
-          console.log("Push setup error:", err)
-        );
-      }, 1000);
+      // Push notifications are native-only — skip on web
+      if (Platform.OS !== "web") {
+        setTimeout(async () => {
+          try {
+            const { setupPushNotifications } = await import("../notifications/push");
+            await setupPushNotifications();
+          } catch (err) {
+            console.log("Push setup error:", err);
+          }
+        }, 1000);
+      }
     } catch (err) {
       console.error(err);
       alert("Something went wrong. Check server.");
@@ -143,19 +141,16 @@ export default function RegisterScreen({ navigation }) {
 
   return (
     <KeyboardAvoidingView
-      style={[
-        styles.screen,
-        { backgroundColor: themeColors.background },
-      ]}
+      style={[styles.screen, { backgroundColor: themeColors.background }]}
       behavior="padding"
       keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
     >
-        <ScrollView
-          style={{ flex: 1 }}
-          keyboardShouldPersistTaps="always"
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
+      <ScrollView
+        style={{ flex: 1 }}
+        keyboardShouldPersistTaps="always"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         <Header title="CommunityApp" />
 
         <View style={styles.container}>
@@ -236,6 +231,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingBottom: 35,
   },
+
   container: {
     justifyContent: "center",
     alignItems: "center",

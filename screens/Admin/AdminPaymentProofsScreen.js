@@ -18,12 +18,11 @@ import {
   fitContainer,
   useImageResolution,
 } from "react-native-zoom-toolkit";
-import * as SecureStore from "expo-secure-store";
 import { useFocusEffect } from "@react-navigation/native";
 
 import Button from "../../components/Button";
 import { useTheme } from "../../context/ThemeContext";
-import { API_URL } from "../../config";
+import { API_URL, getItem } from "../../config";
 
 const PAYMENTS_ENDPOINT = `${API_URL}/api/payments`;
 
@@ -103,7 +102,7 @@ export default function AdminPaymentProofsScreen() {
     setLoading(true);
 
     try {
-      const token = await SecureStore.getItemAsync("token");
+      const token = await getItem("token");
 
       if (!token) {
         Alert.alert("Unauthorized", "Please log in again.");
@@ -217,7 +216,7 @@ export default function AdminPaymentProofsScreen() {
     setSubmitting(true);
 
     try {
-      const token = await SecureStore.getItemAsync("token");
+      const token = await getItem("token");
 
       const res = await fetch(
         `${PAYMENTS_ENDPOINT}/${selectedPayment.id}/verify`,
@@ -271,7 +270,7 @@ export default function AdminPaymentProofsScreen() {
             setSubmitting(true);
 
             try {
-              const token = await SecureStore.getItemAsync("token");
+              const token = await getItem("token");
 
               const res = await fetch(
                 `${PAYMENTS_ENDPOINT}/${selectedPayment.id}/reject`,
@@ -457,14 +456,6 @@ export default function AdminPaymentProofsScreen() {
             <Text style={[styles.sectionLabel, { color: theme.text }]}>
               Extracted text
             </Text>
-
-            {/* <Text style={[styles.extractedText, { color: theme.muted }]}>
-              {selectedPayment.raw_extracted_text ||
-                selectedPayment.possible_amount_text ||
-                selectedPayment.possible_reference_text ||
-                selectedPayment.possible_date_text ||
-                "No extracted text yet. This will show once Python extraction is added."}
-            </Text> */}
 
             {!!selectedPayment.possible_amount_text && (
               <Text style={[styles.extractedText, { color: theme.muted }]}>

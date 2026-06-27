@@ -7,6 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native";
 import { registerForPushAsync, registerDeviceTokenWithServer } from "./notifications/push";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { View, Platform } from "react-native";
 import { useEffect } from "react";
 
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
@@ -44,6 +45,8 @@ function MainTabs() {
   const tabBg = isDarkMode ? "#121212" : "#ffffff";
   const tabBorder = isDarkMode ? "#333" : "transparent";
   const inactive = isDarkMode ? "#9a9a9a" : "gray";
+
+
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: isDarkMode ? "#121212" : "#ffffff" }}>
@@ -186,13 +189,15 @@ export default function App() {
     setupPush();
   }, []);
 
+  const Wrapper = Platform.OS === "web" ? View : GestureHandlerRootView;
+
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider>
-        <AuthProvider>
-          <AppNavigator />
-        </AuthProvider>
-      </ThemeProvider>
-    </GestureHandlerRootView>
+  <Wrapper style={{ flex: 1 }}>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppNavigator />
+      </AuthProvider>
+    </ThemeProvider>
+  </Wrapper>
   );
 }

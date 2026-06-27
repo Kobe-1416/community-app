@@ -8,9 +8,8 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import * as SecureStore from "expo-secure-store";
 import Button from "../../components/Button";
-import { API_URL } from "../../config";
+import { API_URL, getItem } from "../../config";
 import { useTheme } from "../../context/ThemeContext";
 import { colors } from "../../styles/colors";
 
@@ -36,7 +35,7 @@ export default function AdminMarketplaceScreen() {
     setLoadingList(true);
 
     try {
-      const token = await SecureStore.getItemAsync("token");
+      const token = await getItem("token");
 
       const resp = await fetch(LIST_ENDPOINT, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -80,7 +79,7 @@ export default function AdminMarketplaceScreen() {
             setDeleting(true);
 
             try {
-              const token = await SecureStore.getItemAsync("token");
+              const token = await getItem("token");
 
               if (!token) {
                 return Alert.alert("Error", "Not logged in");

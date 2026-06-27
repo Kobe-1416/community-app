@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { API_URL } from "../config";
+import { API_URL, getItem } from "../config";
 import {
   View,
   StyleSheet,
@@ -9,7 +9,6 @@ import {
   FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import * as SecureStore from "expo-secure-store";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../context/ThemeContext";
 
@@ -21,15 +20,13 @@ export default function NoticeBoardScreen() {
   const [announcements, setAnnouncements] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
-  const BASE_URL = `${API_URL}`;
-
   const fetchAnnouncements = async () => {
     try {
       setRefreshing(true);
 
-      const token = await SecureStore.getItemAsync("token");
+      const token = await getItem("token");
 
-      const res = await fetch(`${BASE_URL}/api/announcements`, {
+      const res = await fetch(`${API_URL}/api/announcements`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -80,11 +77,12 @@ export default function NoticeBoardScreen() {
     return category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
   };
 
-  const filteredAnnouncements = announcements.filter((item) =>
-    (item.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (item.body || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (item.category || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (item.createdBy || "").toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredAnnouncements = announcements.filter(
+    (item) =>
+      (item.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.body || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.category || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.createdBy || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getCategoryBg = (category) => {
@@ -180,7 +178,9 @@ export default function NoticeBoardScreen() {
         refreshing={refreshing}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={[styles.emptyText, isDarkMode && styles.mutedTextDark]}>
+            <Text
+              style={[styles.emptyText, isDarkMode && styles.mutedTextDark]}
+            >
               No announcements found.
             </Text>
           </View>

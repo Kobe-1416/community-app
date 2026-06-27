@@ -11,11 +11,10 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import * as SecureStore from "expo-secure-store";
 
 import PressableCard from "../../components/PressableCard";
 import { useTheme } from "../../context/ThemeContext";
-import { API_URL } from "../../config";
+import { API_URL, getItem } from "../../config";
 
 export default function AdminScreen({ navigation }) {
   const { isDarkMode } = useTheme();
@@ -32,7 +31,7 @@ export default function AdminScreen({ navigation }) {
   useEffect(() => {
     const fetchRole = async () => {
       try {
-        const token = await SecureStore.getItemAsync("token");
+        const token = await getItem("token");
 
         if (!token) {
           Alert.alert("Unauthorized", "No login token found. Please log in again.");
@@ -78,7 +77,7 @@ export default function AdminScreen({ navigation }) {
       setCheckingGateCode(true);
       setGateCodeResult(null);
 
-      const token = await SecureStore.getItemAsync("token");
+      const token = await getItem("token");
 
       if (!token) {
         Alert.alert("Unauthorized", "No login token found. Please log in again.");

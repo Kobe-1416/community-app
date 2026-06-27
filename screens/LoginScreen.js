@@ -8,14 +8,14 @@ import {
   Alert,
   ActivityIndicator,
   Animated,
+  Platform,
 } from "react-native";
 import Button from "../components/Button";
 import Header from "../components/Header";
 import React, { useState, useRef, useEffect } from "react";
-import * as SecureStore from "expo-secure-store";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
-import { API_URL } from "../config";
+import { API_URL, saveItem } from "../config";
 import { setupPushNotifications } from "../notifications/push";
 
 export default function LoginScreen({ navigation }) {
@@ -27,7 +27,6 @@ export default function LoginScreen({ navigation }) {
 
   const { setIsAdmin } = useAuth();
 
-  // Animation value
   const fadeAnim = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
@@ -52,7 +51,7 @@ export default function LoginScreen({ navigation }) {
   }, [loading]);
 
   const handleLogin = async () => {
-    if (loading) return; // guard against spam
+    if (loading) return;
 
     if (!phone || !password) {
       Alert.alert("Error", "Please fill in all fields");
@@ -72,11 +71,11 @@ export default function LoginScreen({ navigation }) {
 
       if (!response.ok) {
         Alert.alert("Login failed", data.message || "Invalid credentials");
-        setLoading(false);
         return;
       }
 
-      await SecureStore.setItemAsync("token", data.token);
+      // Works on both native (SecureStore) and web (localStorage)
+      await saveItem("token", data.token);
 
       const meResp = await fetch(`${API_URL}/api/auth/me`, {
         headers: {
@@ -92,11 +91,14 @@ export default function LoginScreen({ navigation }) {
 
       navigation.replace("MainTabs");
 
-      setTimeout(() => {
-        setupPushNotifications().catch(err =>
-          console.log("Push setup error:", err)
-        );
-      }, 1000);
+      // Push notifications are native-only — skip on web
+      if (Platform.OS !== "web") {
+        setTimeout(() => {
+          setupPushNotifications().catch((err) =>
+            console.log("Push setup error:", err)
+          );
+        }, 1000);
+      }
     } catch (error) {
       Alert.alert("Network error", "Could not connect to server");
     } finally {
@@ -145,17 +147,11 @@ export default function LoginScreen({ navigation }) {
         </View>
       </ScrollView>
 
-      {/* Overlay */}
       {loading && (
         <View style={styles.overlay}>
           <ActivityIndicator size="large" color="#fff" />
 
-          <Animated.Text
-            style={[
-              styles.overlayText,
-              { opacity: fadeAnim }, // animated fade
-            ]}
-          >
+          <Animated.Text style={[styles.overlayText, { opacity: fadeAnim }]}>
             Logging in...
           </Animated.Text>
         </View>
