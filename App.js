@@ -6,6 +6,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native";
 import { registerForPushAsync, registerDeviceTokenWithServer } from "./notifications/push";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useEffect } from "react";
 
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
@@ -27,6 +28,7 @@ import AdminAnnouncementsScreen from "./screens/Admin/AdminAnnouncementsScreen";
 import AdminCreateAnnouncementScreen from "./screens/Admin/AdminCreateAnnouncementScreen";
 import AdminMarketplaceScreen from "./screens/Admin/AdminMarketplaceScreen";
 import AdminPaymentProofsScreen from "./screens/Admin/AdminPaymentProofsScreen";
+
 
 const Stack = createNativeStackNavigator();
 const AdminStack = createNativeStackNavigator();
@@ -185,10 +187,12 @@ export default function App() {
   }, []);
 
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <AppNavigator />
-      </AuthProvider>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <AuthProvider>
+          <AppNavigator />
+        </AuthProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

@@ -11,7 +11,13 @@ import {
   Image,
   Linking,
   ScrollView,
+  useWindowDimensions,
 } from "react-native";
+import {
+  ResumableZoom,
+  fitContainer,
+  useImageResolution,
+} from "react-native-zoom-toolkit";
 import * as SecureStore from "expo-secure-store";
 import { useFocusEffect } from "@react-navigation/native";
 
@@ -20,6 +26,53 @@ import { useTheme } from "../../context/ThemeContext";
 import { API_URL } from "../../config";
 
 const PAYMENTS_ENDPOINT = `${API_URL}/api/payments`;
+
+function ZoomablePreview({ uri }) {
+  const { width } = useWindowDimensions();
+
+  const { isFetching, resolution } = useImageResolution({ uri });
+
+  if (isFetching || !resolution) {
+    return (
+      <View
+        style={{
+          width: "100%",
+          height: 280,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
+  const size = fitContainer(resolution.width / resolution.height, {
+    width: width - 32,
+    height: 280,
+  });
+
+  return (
+    <View
+      style={{
+        width: "100%",
+        height: 280,
+        marginTop: 12,
+        borderRadius: 12,
+        overflow: "hidden",
+        backgroundColor: "#eee",
+      }}
+    >
+      <ResumableZoom maxScale={4}>
+        <Image
+          source={{ uri }}
+          style={size}
+          resizeMode="contain"
+        />
+      </ResumableZoom>
+    </View>
+  );
+}
 
 export default function AdminPaymentProofsScreen() {
   const { isDarkMode } = useTheme();
@@ -378,11 +431,7 @@ export default function AdminPaymentProofsScreen() {
             </Text>
 
             {previewUrl ? (
-              <Image
-                source={{ uri: previewUrl }}
-                style={styles.previewImage}
-                resizeMode="contain"
-              />
+              <ZoomablePreview uri={previewUrl} />
             ) : (
               <View
                 style={[

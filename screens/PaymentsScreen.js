@@ -9,20 +9,109 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  ScrollView,
+  Image,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as SecureStore from "expo-secure-store";
 import * as DocumentPicker from "expo-document-picker";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../context/ThemeContext";
+import {
+  ResumableZoom,
+  fitContainer,
+  useImageResolution,
+} from "react-native-zoom-toolkit";
 
 const PAYMENTS_ENDPOINT = `${API_URL}/api/payments`;
 const UPLOAD_ENDPOINT = `${API_URL}/api/payments/upload-proof`;
 
-export default function PaymentsScreen() {
+// ─── Zoomable image preview (same as admin screen) ───────────────────────────
+
+function ZoomablePreview({ uri }) {
+  const { width } = useWindowDimensions();
+  const { isFetching, resolution } = useImageResolution({ uri });
+
+  if (isFetching || !resolution) {
+    return (
+      <View
+        style={{
+          width: "100%",
+          height: 280,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
+  const size = fitContainer(resolution.width / resolution.height, {
+    width: width - 32,
+    height: 280,
+  });
+
+  return (
+    <View
+      style={{
+        width: "100%",
+        height: 280,
+        marginTop: 12,
+        borderRadius: 12,
+        overflow: "hidden",
+        backgroundColor: "#eee",
+      }}
+    >
+      <ResumableZoom maxScale={4}>
+        <Image source={{ uri }} style={size} resizeMode="contain" />
+      </ResumableZoom>
+    </View>
+  );
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const isImageUrl = (url) => {
+  if (!url) return false;
+  const lower = url.toLowerCase();
+  return (
+    lower.includes(".jpg") ||
+    lower.includes(".jpeg") ||
+    lower.includes(".png") ||
+    lower.includes(".webp") ||
+    lower.includes("/image/upload/")
+  );
+};
+
+const getPreviewUrl = (payment) => {
+  if (payment?.preview_image_url) return payment.preview_image_url;
+  if (isImageUrl(payment?.original_file_url)) return payment.original_file_url;
+  return null;
+};
+
+const formatDate = (dateString) => {
+  if (!dateString) return "-";
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString();
+};
+
+const formatAmount = (amount) => {
+  if (!amount) return "-";
+  const n = Number(amount);
+  if (Number.isNaN(n)) return String(amount);
+  return `R${n.toLocaleString()}`;
+};
+
+// ─── Main screen ──────────────────────────────────────────────────────────────
+
+export default function PaymentsScreen({ navigation }) {
   const { isDarkMode } = useTheme();
 
   const [payments, setPayments] = useState([]);
+  const [selectedPayment, setSelectedPayment] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -36,12 +125,12 @@ export default function PaymentsScreen() {
     input: isDarkMode ? "#2a2a2a" : "#fff",
   };
 
+  // ── Data fetching ──────────────────────────────────────────────────────────
+
   const fetchPayments = async () => {
     setLoading(true);
-
     try {
       const token = await SecureStore.getItemAsync("token");
-
       if (!token) {
         Alert.alert("Unauthorized", "Please log in again.");
         setPayments([]);
@@ -49,18 +138,13 @@ export default function PaymentsScreen() {
       }
 
       const res = await fetch(PAYMENTS_ENDPOINT, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok || !data.success) {
-        console.log("Payments fetch failed:", {
-        status: res.status,
-        data,
-      });
+        console.log("Payments fetch failed:", { status: res.status, data });
         setPayments([]);
         return;
       }
@@ -80,6 +164,8 @@ export default function PaymentsScreen() {
     }, [])
   );
 
+  // ── File picking & upload ──────────────────────────────────────────────────
+
   const pickDocument = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -91,7 +177,6 @@ export default function PaymentsScreen() {
       if (result.canceled) return;
 
       const file = result.assets?.[0];
-
       if (!file) {
         Alert.alert("Error", "No file selected.");
         return;
@@ -114,21 +199,17 @@ export default function PaymentsScreen() {
       Alert.alert("No file selected", "Please select a proof of payment first.");
       return;
     }
-
     if (uploading) return;
 
     setUploading(true);
-
     try {
       const token = await SecureStore.getItemAsync("token");
-
       if (!token) {
         Alert.alert("Unauthorized", "Please log in again.");
         return;
       }
 
       const formData = new FormData();
-
       formData.append("proof", {
         uri: selectedFile.uri,
         name: selectedFile.name,
@@ -137,24 +218,15 @@ export default function PaymentsScreen() {
 
       const res = await fetch(UPLOAD_ENDPOINT, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
 
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok || !data.success) {
-        console.log("Upload failed:", {
-        status: res.status,
-        data,
-      });
-
-      Alert.alert(
-        "Upload failed",
-        data.message || "Could not upload proof of payment."
-      );
+        console.log("Upload failed:", { status: res.status, data });
+        Alert.alert("Upload failed", data.message || "Could not upload proof of payment.");
         return;
       }
 
@@ -169,82 +241,60 @@ export default function PaymentsScreen() {
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "-";
-
-    const date = new Date(dateString);
-
-    if (Number.isNaN(date.getTime())) return "-";
-
-    return date.toLocaleDateString();
-  };
-
-  const formatAmount = (amount) => {
-    if (!amount) return "-";
-
-    const n = Number(amount);
-
-    if (Number.isNaN(n)) return String(amount);
-
-    return `R${n.toLocaleString()}`;
-  };
+  // ── Status helpers ─────────────────────────────────────────────────────────
 
   const getStatusStyle = (status) => {
     const normalized = status?.toLowerCase();
-
     if (normalized === "verified") return styles.statusVerified;
     if (normalized === "rejected") return styles.statusRejected;
-
     return styles.statusPending;
   };
 
-  const PaymentCard = ({ item }) => (
-    <Pressable
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.card,
-          borderColor: theme.border,
-        },
-      ]}
-    >
-      <View style={styles.cardHeader}>
-        <Text style={[styles.cardTitle, { color: theme.text }]}>
-          Payment Proof
+  // ── Render ─────────────────────────────────────────────────────────────────
+
+  const previewUrl = getPreviewUrl(selectedPayment);
+
+  const renderPaymentCard = ({ item }) => {
+    const isSelected = selectedPayment?.id === item.id;
+
+    return (
+      <Pressable
+        onPress={() => setSelectedPayment(item)}
+        style={[
+          styles.card,
+          {
+            backgroundColor: theme.card,
+            borderColor: isSelected ? "#85FF27" : theme.border,
+          },
+        ]}
+      >
+        <View style={styles.cardHeader}>
+          <Text style={[styles.cardTitle, { color: theme.text }]}>
+            Payment Proof
+          </Text>
+          <Text style={[styles.statusBadge, getStatusStyle(item.status)]}>
+            {item.status || "pending"}
+          </Text>
+        </View>
+
+        <Text style={[styles.metaText, { color: theme.muted }]}>
+          Uploaded: {formatDate(item.created_at)}
         </Text>
 
-        <Text style={[styles.statusBadge, getStatusStyle(item.status)]}>
-          {item.status || "pending"}
+        <Text style={[styles.metaText, { color: theme.muted }]}>
+          Amount: {formatAmount(item.confirmed_amount)}
         </Text>
-      </View>
 
-      <Text style={[styles.metaText, { color: theme.muted }]}>
-        Uploaded: {formatDate(item.created_at)}
-      </Text>
+        <Text style={[styles.metaText, { color: theme.muted }]}>
+          Reference: {item.confirmed_reference || "-"}
+        </Text>
 
-      <Text style={[styles.metaText, { color: theme.muted }]}>
-        Amount: {formatAmount(item.confirmed_amount)}
-      </Text>
-
-      <Text style={[styles.metaText, { color: theme.muted }]}>
-        Reference: {item.confirmed_reference || "-"}
-      </Text>
-
-      <Text style={[styles.metaText, { color: theme.muted }]}>
-        Payment Date: {formatDate(item.confirmed_payment_date)}
-      </Text>
-
-      {!!item.original_file_url && (
-        <Pressable
-          style={styles.openButton}
-          onPress={() => Linking.openURL(item.original_file_url)}
-        >
-          <Ionicons name="document-text-outline" size={16} color="#000" />
-          <Text style={styles.openButtonText}>Open Proof</Text>
-        </Pressable>
-      )}
-    </Pressable>
-  );
+        <Text style={[styles.metaText, { color: theme.muted }]}>
+          Payment Date: {formatDate(item.confirmed_payment_date)}
+        </Text>
+      </Pressable>
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -254,13 +304,11 @@ export default function PaymentsScreen() {
         Upload proof of payment and track verification status.
       </Text>
 
+      {/* ── Upload box ── */}
       <View
         style={[
           styles.uploadBox,
-          {
-            backgroundColor: theme.card,
-            borderColor: theme.border,
-          },
+          { backgroundColor: theme.card, borderColor: theme.border },
         ]}
       >
         <View style={styles.uploadHeader}>
@@ -269,7 +317,6 @@ export default function PaymentsScreen() {
             size={28}
             color={isDarkMode ? "#85FF27" : "#111"}
           />
-
           <Text style={[styles.uploadTitle, { color: theme.text }]}>
             Upload Proof of Payment
           </Text>
@@ -283,10 +330,7 @@ export default function PaymentsScreen() {
           <View
             style={[
               styles.selectedFileBox,
-              {
-                backgroundColor: theme.input,
-                borderColor: theme.border,
-              },
+              { backgroundColor: theme.input, borderColor: theme.border },
             ]}
           >
             <Text
@@ -295,7 +339,6 @@ export default function PaymentsScreen() {
             >
               {selectedFile.name}
             </Text>
-
             <Text style={[styles.selectedFileMeta, { color: theme.muted }]}>
               {selectedFile.mimeType}
             </Text>
@@ -328,11 +371,11 @@ export default function PaymentsScreen() {
         </View>
       </View>
 
+      {/* ── Payment list ── */}
       <View style={styles.sectionHeader}>
         <Text style={[styles.sectionTitle, { color: theme.text }]}>
           My Payment Proofs
         </Text>
-
         <Pressable onPress={fetchPayments}>
           <Ionicons
             name="refresh"
@@ -352,7 +395,7 @@ export default function PaymentsScreen() {
       ) : (
         <FlatList
           data={payments}
-          renderItem={({ item }) => <PaymentCard item={item} />}
+          renderItem={renderPaymentCard}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
@@ -367,9 +410,122 @@ export default function PaymentsScreen() {
           }
         />
       )}
+
+      {/* ── Detail panel (overlays list, same as admin) ── */}
+      {selectedPayment && (
+        <View style={[styles.detailPanel, { backgroundColor: theme.card }]}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <Text style={[styles.detailTitle, { color: theme.text }]}>
+              Payment Proof
+            </Text>
+
+            <Text style={[styles.metaText, { color: theme.muted }]}>
+              Uploaded: {formatDate(selectedPayment.created_at)}
+            </Text>
+
+            <Text style={[styles.metaText, { color: theme.muted }]}>
+              Status:{" "}
+              <Text
+                style={[
+                  styles.statusInline,
+                  getStatusStyle(selectedPayment.status),
+                ]}
+              >
+                {selectedPayment.status || "pending"}
+              </Text>
+            </Text>
+
+            {/* Zoomable preview for images */}
+            {previewUrl ? (
+              <ZoomablePreview uri={previewUrl} />
+            ) : (
+              <View
+                style={[styles.noPreviewBox, { borderColor: theme.border }]}
+              >
+                <Ionicons
+                  name="document-outline"
+                  size={36}
+                  color={theme.muted}
+                />
+                <Text style={[styles.metaText, { color: theme.muted, marginTop: 8 }]}>
+                  No image preview available for this file.
+                </Text>
+              </View>
+            )}
+
+            {/* Confirmed details (read-only for user) */}
+            <Text style={[styles.sectionLabel, { color: theme.text }]}>
+              Confirmed details
+            </Text>
+
+            <View
+              style={[
+                styles.detailRow,
+                { backgroundColor: theme.input, borderColor: theme.border },
+              ]}
+            >
+              <Text style={[styles.detailLabel, { color: theme.muted }]}>
+                Amount
+              </Text>
+              <Text style={[styles.detailValue, { color: theme.text }]}>
+                {formatAmount(selectedPayment.confirmed_amount)}
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.detailRow,
+                { backgroundColor: theme.input, borderColor: theme.border },
+              ]}
+            >
+              <Text style={[styles.detailLabel, { color: theme.muted }]}>
+                Reference
+              </Text>
+              <Text style={[styles.detailValue, { color: theme.text }]}>
+                {selectedPayment.confirmed_reference || "-"}
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.detailRow,
+                { backgroundColor: theme.input, borderColor: theme.border },
+              ]}
+            >
+              <Text style={[styles.detailLabel, { color: theme.muted }]}>
+                Payment date
+              </Text>
+              <Text style={[styles.detailValue, { color: theme.text }]}>
+                {formatDate(selectedPayment.confirmed_payment_date)}
+              </Text>
+            </View>
+
+            {/* Reject reason if present */}
+            {!!selectedPayment.reject_reason && (
+              <View style={styles.rejectReasonBox}>
+                <Text style={styles.rejectReasonLabel}>Rejection reason</Text>
+                <Text style={styles.rejectReasonText}>
+                  {selectedPayment.reject_reason}
+                </Text>
+              </View>
+            )}
+
+            <Pressable
+              style={styles.closeButton}
+              onPress={() => setSelectedPayment(null)}
+            >
+              <Text style={[styles.closeButtonText, { color: theme.muted }]}>
+                Close
+              </Text>
+            </Pressable>
+          </ScrollView>
+        </View>
+      )}
     </View>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   container: {
@@ -388,6 +544,8 @@ const styles = StyleSheet.create({
     marginTop: 6,
     marginBottom: 15,
   },
+
+  // ── Upload box ──────────────────────────────────────────────────────────────
 
   uploadBox: {
     borderWidth: 1,
@@ -464,6 +622,8 @@ const styles = StyleSheet.create({
     opacity: 0.55,
   },
 
+  // ── List ────────────────────────────────────────────────────────────────────
+
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -524,24 +684,110 @@ const styles = StyleSheet.create({
 
   metaText: {
     fontSize: 13,
-    marginTop: 6,
+    marginTop: 4,
   },
 
-  openButton: {
-    marginTop: 12,
-    backgroundColor: "#85FF27",
-    paddingVertical: 11,
+  // ── Detail panel ────────────────────────────────────────────────────────────
+
+  detailPanel: {
+    position: "absolute",
+    left: 12,
+    right: 12,
+    top: 80,
+    bottom: 20,
+    borderRadius: 16,
+    padding: 16,
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+  },
+
+  detailTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    marginBottom: 6,
+  },
+
+  statusInline: {
+    fontSize: 11,
+    fontWeight: "900",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    overflow: "hidden",
+    textTransform: "uppercase",
+    color: "#000",
+  },
+
+  noPreviewBox: {
+    height: 140,
+    borderWidth: 1,
     borderRadius: 12,
+    marginTop: 12,
     alignItems: "center",
     justifyContent: "center",
-    flexDirection: "row",
-    gap: 6,
+    padding: 12,
   },
 
-  openButtonText: {
-    color: "#000",
-    fontWeight: "900",
+  sectionLabel: {
+    fontSize: 15,
+    fontWeight: "800",
+    marginTop: 16,
+    marginBottom: 8,
   },
+
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+  },
+
+  detailLabel: {
+    fontSize: 13,
+  },
+
+  detailValue: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+
+  rejectReasonBox: {
+    marginTop: 8,
+    backgroundColor: "#fff0f0",
+    borderRadius: 10,
+    padding: 12,
+  },
+
+  rejectReasonLabel: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#cc0000",
+    marginBottom: 4,
+  },
+
+  rejectReasonText: {
+    fontSize: 13,
+    color: "#333",
+  },
+
+  closeButton: {
+    padding: 14,
+    alignItems: "center",
+    marginTop: 4,
+  },
+
+  closeButtonText: {
+    fontWeight: "700",
+  },
+
+  // ── Misc ────────────────────────────────────────────────────────────────────
 
   center: {
     alignItems: "center",
