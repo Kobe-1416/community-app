@@ -44,6 +44,13 @@ router.post("/entry", authenticateToken, async (req, res) => {
       });
     }
 
+    if(host_resident >= 7000){
+      return res.status(400).json({
+        success: false,
+        message: "House number does not exist",
+      });
+    }
+
     // Check if visitor already exists
     let visitorResult = await pool.query(
       "SELECT id FROM visitors WHERE plate = $1",
