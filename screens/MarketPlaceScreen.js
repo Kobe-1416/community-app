@@ -53,7 +53,6 @@ export default function MarketPlaceScreen({ navigation }) {
       const token = await getItem("token");
 
       if (!token) {
-        console.log("No token found for marketplace request");
         setListings([]);
         return;
       }
@@ -67,7 +66,6 @@ export default function MarketPlaceScreen({ navigation }) {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok || !data.success) {
-        console.log("Marketplace fetch failed:", data);
         setListings([]);
         return;
       }

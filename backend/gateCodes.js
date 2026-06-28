@@ -75,12 +75,10 @@ router.post("/generate-auto", async (req, res) => {
   const cronId = `cron-${Date.now()}`;
   const startedAt = Date.now();
 
-  console.log(`[${cronId}] Cron request received`);
-
   const cronSecret = req.headers["x-cron-secret"];
 
   if (!process.env.CRON_SECRET) {
-    console.error(`[${cronId}] CRON_SECRET missing`);
+    console.error(`CRON_SECRET missing`);
 
     return res.status(500).json({
       success: false,
@@ -89,7 +87,6 @@ router.post("/generate-auto", async (req, res) => {
   }
 
   if (cronSecret !== process.env.CRON_SECRET) {
-    console.warn(`[${cronId}] Unauthorized cron request`);
 
     return res.status(401).json({
       success: false,
@@ -98,23 +95,13 @@ router.post("/generate-auto", async (req, res) => {
   }
 
   try {
-    console.log(`[${cronId}] Starting gate code generation`);
 
     const result = await generateAndAssignGateCodes();
 
     const durationMs = Date.now() - startedAt;
 
-    console.log(`[${cronId}] Raw result summary:`, {
-      success: result.success,
-      message: result.message,
-      deletedCount: result.deletedCount,
-      insertedCount: result.insertedCount,
-      assignedCount: result.assignedCount,
-      durationMs,
-    });
-
     if (!result.success) {
-      console.error(`[${cronId}] Gate code generation failed`, {
+      console.error(`Gate code generation failed`, {
         message: result.message,
         durationMs,
       });
@@ -125,7 +112,7 @@ router.post("/generate-auto", async (req, res) => {
       });
     }
 
-    console.log(`[${cronId}] Gate code generation completed`);
+    console.log(`Gate code generation completed`);
 
     return res.json({
       success: true,
@@ -138,7 +125,7 @@ router.post("/generate-auto", async (req, res) => {
   } catch (err) {
     const durationMs = Date.now() - startedAt;
 
-    console.error(`[${cronId}] Auto gate code generation error:`, {
+    console.error(` Auto gate code generation error:`, {
       message: err.message,
       stack: err.stack,
       durationMs,

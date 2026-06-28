@@ -25,7 +25,6 @@ export default function CreateListingScreen({ navigation, route }) {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    console.log("handleSubmit triggered");
 
     if (!title || !price || !description || !phone) {
       Alert.alert("Missing Information", "Please fill in all fields");
@@ -37,14 +36,12 @@ export default function CreateListingScreen({ navigation, route }) {
       return;
     }
 
-    console.log("Validation passed");
 
     try {
       setLoading(true);
 
       // --- GET TOKEN ---
       const token = await getItem("token");
-      console.log("Token:", token);
 
       if (!token) {
         Alert.alert("Not authenticated", "Please log in again.");
@@ -52,20 +49,16 @@ export default function CreateListingScreen({ navigation, route }) {
       }
 
       // --- FETCH USER ---
-      console.log("Calling /auth/me");
 
       const meResp = await fetch(`${API_URL}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      console.log("User response status:", meResp.status);
 
       if (!meResp.ok) {
         throw new Error("Failed to get user info");
       }
 
       const meData = await meResp.json();
-      console.log("User data:", meData);
 
       const userId = meData.user?.dbUserId;
 
@@ -74,8 +67,6 @@ export default function CreateListingScreen({ navigation, route }) {
       }
 
       // --- UPLOAD IMAGES FIRST ---
-      console.log("Images array:", images);
-      console.log("Starting upload loop");
 
       const uploadedImages = [];
 
@@ -100,10 +91,7 @@ export default function CreateListingScreen({ navigation, route }) {
           body: formData,
         });
 
-        console.log("Upload response status:", uploadRes.status);
-
         const rawText = await uploadRes.text();
-        console.log("Raw upload response:", rawText);
 
         let uploadData;
         try {
@@ -111,8 +99,6 @@ export default function CreateListingScreen({ navigation, route }) {
         } catch {
           throw new Error("Upload response is not valid JSON");
         }
-
-        console.log("Upload response data:", uploadData);
 
         if (!uploadRes.ok || !uploadData.url) {
           throw new Error(uploadData.message || "Image upload failed");

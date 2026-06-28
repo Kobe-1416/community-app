@@ -35,7 +35,7 @@ export default function NoticeBoardScreen() {
       const json = await res.json().catch(() => ({}));
 
       if (!res.ok || !json.success) {
-        console.log("Failed to load announcements:", json);
+        console.log("Failed to load announcements:");
         return;
       }
 

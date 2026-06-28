@@ -143,7 +143,6 @@ export default function PaymentsScreen({ navigation }) {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok || !data.success) {
-        console.log("Payments fetch failed:", { status: res.status, data });
         setPayments([]);
         return;
       }
@@ -224,7 +223,6 @@ export default function PaymentsScreen({ navigation }) {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok || !data.success) {
-        console.log("Upload failed:", { status: res.status, data });
         Alert.alert("Upload failed", data.message || "Could not upload proof of payment.");
         return;
       }

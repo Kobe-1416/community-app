@@ -128,7 +128,6 @@ export default function AdminAddVisitorScreen({ navigation }) {
       const data = await resp.json().catch(() => ({}));
 
       if (!resp.ok) {
-        console.log("Add visitor failed:", data);
         return Alert.alert("Failed", data.message || "Could not add visitor");
       }
 

@@ -26,4 +26,4 @@ app.get("/health", (req, res) => {
 
 app.use("/api", apiRouter);
 
-app.listen(PORT, () => console.log(`Server running on ${PORT}`));
+app.listen(PORT, () => console.log(`Server running`));

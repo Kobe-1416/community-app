@@ -34,7 +34,6 @@ async function notifyMarketplaceUsers({ sellerId, item }) {
       },
     });
 
-    console.log(`Marketplace notification sent to ${tokens.length} devices`);
   } catch (err) {
     console.error("Marketplace notification failed:", err);
   }
