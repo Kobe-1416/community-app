@@ -28,7 +28,23 @@ router.post("/entry", authenticateToken, async (req, res) => {
   }
 
   try {
-    // 1. Check if visitor already exists
+      // Check that the house number exists
+    const residentCheck = await pool.query(
+      `SELECT 1
+      FROM com_users
+      WHERE house_number = $1
+      LIMIT 1`,
+      [host_resident]
+    );
+
+    if (residentCheck.rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "House number does not exist.",
+      });
+    }
+
+    // Check if visitor already exists
     let visitorResult = await pool.query(
       "SELECT id FROM visitors WHERE plate = $1",
       [plate]
