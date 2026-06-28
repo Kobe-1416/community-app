@@ -4,11 +4,11 @@
 4. Get the gatecode generator working. (works now)
 5. Add verification either phone number or email.
 6. Sort out latency issue when logging in or registering. (works now)
-7. Add loading animation to all latency delay functions. (partially works)
-8. Remove all server side notifications
+7. Add loading animation to all latency delay functions. (works now)
+8. Remove all server side notifications (works now)
 9. Logout functionality (works now)
 10. Delete account functionality
 11. "More" section information in settings screen.
 12. Call direct from listing details  (works now)
-13. Tweak all colour mismatch in the preview build app
-14. Assign gate code to new user and not only existing residents only.
+13. Tweak all colour mismatch in the preview build app (works now)
+14. Assign gate code to new user and not only existing residents only. (works now)
