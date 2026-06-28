@@ -17,7 +17,7 @@ TABLES ASSUMED:
  * Do not forget to use the authenticateToken function when in production
  */
 router.post("/entry", authenticateToken, async (req, res) => {
-  if (req.user.role?.toLowerCase() !== "admin" || req.user.role?.toLowerCase() === "security") {
+  if (req.user.role?.toLowerCase() !== "admin" && req.user.role?.toLowerCase() !== "security") {
      return res.status(403).json({ message: "Forbidden" });
    }
 

@@ -66,7 +66,7 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
         ve.exit_time
       FROM visitor_entries ve
       JOIN visitors v ON v.id = ve.visitor_id
-      WHERE ve.entry_time::date = CURRENT_DATE
+      WHERE ve.exit_time IS NULL
       ORDER BY ve.entry_time DESC
       `
     );
